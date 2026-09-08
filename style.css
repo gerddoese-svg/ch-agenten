@@ -3351,5 +3351,252 @@ select,
     font-size: 16px;
   }
 
+}/* ===== SEITENLEISTE REPARATUR ===== */
+
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+}
+
+aside,
+.sidebar {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative;
+    width: 250px;
+    min-width: 250px;
+    flex-shrink: 0;
+    z-index: 1000;
+}
+
+/* Hauptbereich */
+main {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Handy */
+@media (max-width: 768px) {
+    aside,
+    .sidebar {
+        width: 100%;
+        min-width: 0;
+    }
+}/* ================================
+   MOBILE: LINKE SEITENLEISTE
+   ================================ */
+
+@media (max-width: 768px) {
+
+  .app-shell {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100vh;
+  }
+
+  aside,
+  .sidebar {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+
+    z-index: 9999 !important;
+
+    flex-direction: row !important;
+    flex-wrap: wrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  aside a,
+  aside button,
+  .sidebar a,
+  .sidebar button {
+    flex: 0 0 auto;
+    min-height: 50px;
+    padding: 10px 14px;
+  }
+
+  main {
+    width: 100%;
+    min-width: 0;
+  }
+}/* =========================================
+   MOBILE NAVIGATION - ENDGÜLTIGE REPARATUR
+   ========================================= */
+
+@media (max-width: 768px) {
+
+  .app-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+  }
+
+  .sidebar {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: auto !important;
+
+    flex-direction: column !important;
+
+    padding: 12px !important;
+
+    overflow: visible !important;
+
+    z-index: 9999 !important;
+  }
+
+  .sidebar .logo {
+    display: flex !important;
+    margin-bottom: 10px !important;
+  }
+
+  .sidebar .nav {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+
+    width: 100% !important;
+
+    gap: 6px !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    padding-bottom: 6px !important;
+  }
+
+  .sidebar .nav-title {
+    display: none !important;
+  }
+
+  .sidebar .nav-btn {
+    display: flex !important;
+    flex: 0 0 auto !important;
+
+    width: auto !important;
+    min-width: max-content !important;
+    min-height: 44px !important;
+
+    margin: 0 !important;
+    padding: 10px 14px !important;
+
+    white-space: nowrap !important;
+  }
+
+  .sidebar .profile {
+    display: flex !important;
+    margin-top: 10px !important;
+  }
+
+  .sidebar .account-switcher {
+    display: none !important;
+  }
+
+  .main {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 14px !important;
+  }
+
+  .topbar {
+    width: 100% !important;
+  }
+
+}/* =========================================
+   HANDY: SIDEBAR OBEN
+   PC: SIDEBAR LINKS
+   ========================================= */
+
+@media (max-width: 768px) {
+
+  .app-shell {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  .sidebar {
+    display: flex !important;
+    flex-direction: column !important;
+
+    position: relative !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: auto !important;
+
+    padding: 12px !important;
+    order: 1;
+
+    overflow: hidden !important;
+  }
+
+  .sidebar .logo {
+    display: flex !important;
+    margin-bottom: 10px !important;
+  }
+
+  .sidebar .nav {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+
+    width: 100% !important;
+    gap: 6px !important;
+
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+
+    padding-bottom: 6px;
+  }
+
+  .sidebar .nav-title {
+    display: none !important;
+  }
+
+  .sidebar .nav-btn {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: max-content !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .sidebar .profile {
+    display: none !important;
+  }
+
+  .sidebar .account-switcher {
+    display: none !important;
+  }
+
+  .main {
+    order: 2;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
 }
 
