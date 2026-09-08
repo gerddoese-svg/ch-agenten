@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Schilischoten Agenten</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="app-shell">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+      <div class="logo">
+        <div class="logo-icon">🌶️</div>
+        <div>
+          <h1>Schilischoten</h1>
+          <span>ERMITTLER-ZENTRALE</span>
+        </div>
+      </div>
+
+      <nav class="nav" aria-label="Hauptnavigation">
+        <p class="nav-title">Zentrale</p>
+        
+        <button class="nav-btn active" data-page="dashboard" type="button">
+          <span>🏠</span>
+          <span>Dashboard</span>
+        </button>
+
+        <button class="nav-btn" data-page="cases" type="button">
+          <span>🕵️</span>
+          <span>Fälle</span>
+        </button>
+
+        <button class="nav-btn" data-page="compare" type="button">
+          <span>🔍</span>
+          <span>Vergleichen</span>
+        </button>
+
+        <button class="nav-btn" data-page="phantom" type="button">
+          <span>🧩</span>
+          <span>Phantombild</span>
+        </button>
+
+        <button class="nav-btn" data-page="evidence" type="button">
+          <span>🔎</span>
+          <span>Beweise</span>
+        </button>
+
+        <button class="nav-btn" data-page="suspects" type="button">
+          <span>👤</span>
+          <span>Verdächtige</span>
+        </button>
+
+        <p class="nav-title">Team</p>
+
+        <button class="nav-btn" data-page="chat" type="button">
+          <span>💬</span>
+          <span>Agenten-Chat</span>
+        </button>
+
+        <button class="nav-btn" data-page="team" type="button">
+          <span>👥</span>
+          <span>Team</span>
+        </button>
+
+        <button class="nav-btn" data-page="stats" type="button">
+          <span>📊</span>
+          <span>Statistiken</span>
+        </button>
+
+        <button class="nav-btn" data-page="settings" type="button">
+          <span>⚙️</span>
+          <span>Einstellungen</span>
+        </button>
+      </nav>
+
+      <div class="profile">
+        <div class="avatar" id="profileAvatar">L</div>
+        <div>
+          <strong id="profileName">Agent Leon</strong>
+          <small id="profileRole">Chef-Ermittler</small>
+        </div>
+      </div>
+
+      <div class="account-switcher">
+        <button id="accountToggle" class="account-toggle" type="button" aria-expanded="false">
+          <span class="account-toggle-avatar" id="accountToggleAvatar">L</span>
+          <span class="account-toggle-meta">
+            <strong id="accountToggleName">Leon</strong>
+            <small id="accountToggleRole">Chef-Ermittler</small>
+          </span>
+          <span class="account-toggle-caret">▾</span>
+        </button>
+
+        <div id="accountMenu" class="account-menu hidden">
+          <button class="account-option active" data-account="Leon" data-role="Chef-Ermittler" type="button">
+            <span class="mini-avatar">L</span>
+            <span>Leon</span>
+          </button>
+          <button class="account-option" data-account="Leo" data-role="Agent" type="button">
+            <span class="mini-avatar">L</span>
+            <span>Leo</span>
+          </button>
+          <button class="account-option" data-account="Leonie" data-role="Agent" type="button">
+            <span class="mini-avatar">L</span>
+            <span>Leonie</span>
+          </button>
+          <button class="account-option" data-account="Melina" data-role="Agent" type="button">
+            <span class="mini-avatar">M</span>
+            <span>Melina</span>
+          </button>
+          <button class="account-option" data-account="Nils" data-role="Agent" type="button">
+            <span class="mini-avatar">N</span>
+            <span>Nils</span>
+          </button>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- HAUPTBEREICH -->
+    <main class="main">
+
+      <header class="topbar">
+        <div>
+          <h2 id="pageTitle">Ermittlungszentrale</h2>
+          <p id="pageSubtitle">Willkommen zurück, Agent.</p>
+        </div>
+
+        <div class="top-actions">
+          <div class="search-wrap">
+            <input id="globalSearch" class="search" type="text" placeholder="🔎 Suchen...">
+            <div id="searchResults" class="search-results hidden"></div>
+          </div>
+          
+          <button class="notification" id="notificationButton" type="button" title="Benachrichtigungen">
+            🔔
+            <span id="notificationBadge">0</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- DASHBOARD-SEITE -->
+      <section class="page active" id="dashboard">
+        <div class="welcome">
+          <div>
+            <span class="eyebrow">AGENTENZENTRALE</span>
+            <h1>Willkommen zurück, Agent Leon. 🌶️</h1>
+            <p>Die Zentrale ist bereit. Welche Mission nehmen wir heute an?</p>
+          </div>
+          <button class="primary" id="dashboardNewCase" type="button">
+            + Neue Mission
+          </button>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🕵️</div>
+            <strong id="activeCasesCount">0</strong>
+            <span>Aktive Fälle</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🔎</div>
+            <strong id="dashboardEvidenceCount">0</strong>
+            <span>Beweise</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">👤</div>
+            <strong id="dashboardSuspectCount">0</strong>
+            <span>Verdächtige</span>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏆</div>
+            <strong id="solvedCasesCount">0</strong>
+            <span>Gelöste Fälle</span>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <h3>Aktuelle Fälle</h3>
+                <p>Die neuesten Ermittlungen</p>
+              </div>
+              <button class="text-button" data-goto="cases" type="button">
+                Alle anzeigen
+              </button>
+            </div>
+            <div class="panel-content" id="dashboardCasesList">
+              <p class="empty-text">Keine aktuellen Fälle vorhanden.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FÄLLE-SEITE -->
+      <section class="page" id="cases">
+        <div class="page-card">
+          <div class="section-heading">
+            <div>
+              <h2>Fälle</h2>
+              <p>Verwalte deine Ermittlungen.</p>
+            </div>
+            <button class="primary" id="newCaseButton" type="button">
+              + Neuer Fall
+            </button>
+          </div>
+
+          <div class="toolbar">
+            <input id="caseSearch" class="input" type="text" placeholder="Fall suchen...">
+            <select id="caseFilter" class="input">
+              <option value="all">Alle</option>
+              <option value="open">Offen</option>
+              <option value="progress">In Arbeit</option>
+              <option value="done">Gelöst</option>
+            </select>
+          </div>
+
+          <div id="casesList" class="cards-list"></div>
+        </div>
+      </section>
+
+      <!-- VERGLEICHEN-SEITE -->
+      <section class="page" id="compare">
+        <div class="page-card">
+          <div class="section-heading">
+            <div>
+              <h2>Beweise vergleichen</h2>
+              <p>Vergleiche zwei Bilder miteinander.</p>
+            </div>
+          </div>
+
+          <div class="compare-grid">
+            <div class="upload-box">
+              <h3>Bild A</h3>
+              <input id="compareFileA" type="file" accept="image/*" hidden>
+              <button id="uploadButtonA" class="secondary" type="button">Bild hochladen</button>
+              <div id="previewA" class="image-preview">Noch kein Bild ausgewählt.</div>
+            </div>
+            <div class="upload-box">
+              <h3>Bild B</h3>
+              <input id="compareFileB" type="file" accept="image/*" hidden>
+              <button id="uploadButtonB" class="secondary" type="button">Bild hochladen</button>
+              <div id="previewB" class="image-preview">Noch kein Bild ausgewählt.</div>
+            </div>
+          </div>
+          <button id="startCompareButton" class="primary" type="button">Bilder analysieren</button>
+          <div id="compareResult" class="compare-result hidden">
+            <h3 id="comparisonTitle">Analyse</h3>
+            <strong id="comparisonPercent">0%</strong>
+            <span id="comparisonMatchingPixels"></span>
+            <p id="comparisonDescription">Wähle zwei Bilder für den Vergleich aus.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHAT-SEITE -->
+      <section class="page" id="chat">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">KOMMUNIKATION</span>
+            <h1>Agenten-Chat</h1>
+            <p>Teile Hinweise und Bilder mit deinem Team.</p>
+          </div>
+        </div>
+        <div class="chat-panel">
+          <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
+          <div id="chatImagePreview" class="chat-image-preview hidden"></div>
+          <div class="chat-input-row">
+            <input id="chatImage" type="file" accept="image/*" hidden>
+            <button id="attachChatImage" class="secondary" type="button">Bild auswählen</button>
+            <input id="chatInput" type="text" placeholder="Nachricht an die Agenten...">
+            <button id="sendMessage" class="primary" type="button">Senden</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="stats">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">AUSWERTUNG</span>
+            <h1>Statistiken</h1>
+            <p>Behalte den Überblick über deine Ermittlungsarbeit.</p>
+          </div>
+        </div>
+        <div class="stats-dashboard">
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-icon">📁</div><strong id="statsTotalCases">0</strong><span>Fälle gesamt</span></div>
+            <div class="stat-card"><div class="stat-icon">🏆</div><strong id="statsSolvedCases">0</strong><span>Gelöste Fälle</span></div>
+            <div class="stat-card"><div class="stat-icon">🎯</div><strong id="statsSuccessRate">0%</strong><span>Erfolgsquote</span></div>
+            <div class="stat-card"><div class="stat-icon">🔎</div><strong id="statsEvidenceCount">0</strong><span>Beweise</span></div>
+          </div>
+          <div class="stats-panels">
+            <div class="panel stats-breakdown">
+              <div class="panel-header"><div><h3>Fallstatus</h3><p>Verteilung deiner Ermittlungen</p></div></div>
+              <div class="stats-bars">
+                <div><span>Offen <strong id="statsOpenCases">0</strong></span><i><b id="statsOpenBar"></b></i></div>
+                <div><span>In Arbeit <strong id="statsProgressCases">0</strong></span><i><b id="statsProgressBar"></b></i></div>
+                <div><span>Gelöst <strong id="statsDoneCases">0</strong></span><i><b id="statsDoneBar"></b></i></div>
+              </div>
+            </div>
+            <div class="panel stats-activity">
+              <div class="panel-header"><div><h3>Aktivität</h3><p>Gespeicherte Arbeitsstände</p></div></div>
+              <div class="activity-list">
+                <span><b class="activity-dot evidence-dot"></b>Beweise<strong id="statsActivityEvidence">0</strong></span>
+                <span><b class="activity-dot suspect-dot"></b>Verdächtige<strong id="statsActivitySuspects">0</strong></span>
+                <span><b class="activity-dot message-dot"></b>Nachrichten<strong id="statsMessageCount">0</strong></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EINSTELLUNGEN-SEITE -->
+      <section class="page" id="settings">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">SYSTEM</span>
+            <h1>Einstellungen</h1>
+            <p>Verwalte die Darstellung und Hinweise der Zentrale.</p>
+          </div>
+        </div>
+        <div class="settings-list">
+          <label class="setting-row">
+            <span><strong>Benachrichtigungen</strong><small>Neue Meldungen anzeigen.</small></span>
+            <input type="checkbox" data-setting="notifications" checked>
+          </label>
+          <label class="setting-row">
+            <span><strong>Missionserinnerungen</strong><small>An offene Ermittlungen erinnern.</small></span>
+            <input type="checkbox" data-setting="missionReminders" checked>
+          </label>
+          <label class="setting-row">
+            <span><strong>Online-Status</strong><small>Status für das Team anzeigen.</small></span>
+            <input type="checkbox" data-setting="onlineStatus" checked>
+          </label>
+          <label class="setting-row">
+            <span><strong>Dunkler Modus</strong><small>Dunkle Darstellung der Zentrale verwenden.</small></span>
+            <input type="checkbox" data-setting="darkMode" checked>
+          </label>
+          <label class="setting-row">
+            <span><strong>Kompakte Ansicht</strong><small>Mehr Inhalte mit geringeren Abständen anzeigen.</small></span>
+            <input type="checkbox" data-setting="compactMode">
+          </label>
+          <label class="setting-row">
+            <span><strong>Hoher Kontrast</strong><small>Rahmen und Texte deutlicher hervorheben.</small></span>
+            <input type="checkbox" data-setting="highContrast">
+          </label>
+          <label class="setting-row">
+            <span><strong>Bewegungen</strong><small>Übergänge und Animationen aktivieren.</small></span>
+            <input type="checkbox" data-setting="motion" checked>
+          </label>
+          <label class="setting-row">
+            <span><strong>Akzentfarbe</strong><small>Farbe für aktive Bedienelemente wählen.</small></span>
+            <select data-setting="accentColor">
+              <option value="chili">Chili</option>
+              <option value="amber">Amber</option>
+              <option value="mint">Mint</option>
+              <option value="blue">Blau</option>
+            </select>
+          </label>
+          <label class="setting-row">
+            <span><strong>UI-Dichte</strong><small>Abstände der Oberfläche anpassen.</small></span>
+            <select data-setting="uiDensity">
+              <option value="comfortable">Komfortabel</option>
+              <option value="compact">Kompakt</option>
+              <option value="spacious">Großzügig</option>
+            </select>
+          </label>
+          <div class="setting-row danger-setting">
+            <span><strong>App-Daten löschen</strong><small>Entfernt Fälle, Profile und lokale Einstellungen dieser App.</small></span>
+            <button id="clearAppDataButton" class="secondary" type="button">Daten löschen</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="research">
+        <div class="section-heading">
+          <div><span class="eyebrow">RECHERCHE</span><h1>Lokaler Recherche-Browser</h1><p>Suche nach Meldungen und Themen im Rems-Murr-Kreis.</p></div>
+        </div>
+        <div class="research-browser page-card">
+          <div class="research-toolbar">
+            <button id="researchBackButton" class="browser-icon-button" type="button" title="Zurück">←</button>
+            <button id="researchForwardButton" class="browser-icon-button" type="button" title="Vor">→</button>
+            <input id="researchAddress" class="input" type="search" placeholder="Suchbegriff oder Ort...">
+            <button id="researchSearchButton" class="primary" type="button">Suchen</button>
+          </div>
+          <div class="research-filter-row">
+            <span class="research-location">📍 Rems-Murr-Kreis</span>
+            <button class="research-filter active" data-research-filter="all" type="button">Alles</button>
+            <button class="research-filter" data-research-filter="police" type="button">Polizei</button>
+            <button class="research-filter" data-research-filter="news" type="button">Nachrichten</button>
+            <button class="research-filter" data-research-filter="alerts" type="button">Fahndung</button>
+          </div>
+          <div class="research-body">
+            <aside class="research-history"><strong>Letzte Suchen</strong><div id="researchHistoryList"></div></aside>
+            <div class="research-results-panel"><div class="research-status" id="researchStatus">Bereit für eine lokale Recherche.</div><div id="researchResultsGrid" class="research-results-grid"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="evidence">
+        <div class="section-heading"><div><span class="eyebrow">ARCHIV</span><h1>Beweisarchiv</h1><p>Gesammelte Hinweise und Beweisstücke.</p></div></div>
+        <div id="evidenceGrid" class="cards-list"></div>
+      </section>
+
+      <section class="page" id="suspects">
+        <div class="section-heading"><div><span class="eyebrow">PERSONEN</span><h1>Verdächtige</h1><p>Erfasste Personen aus deinen Ermittlungen.</p></div></div>
+        <div id="suspectGrid" class="cards-list"></div>
+      </section>
+
+      <section class="page" id="team">
+        <div class="section-heading"><div><span class="eyebrow">ZENTRALE</span><h1>Ermittler-Team</h1><p>Das Team der Schilischoten-Zentrale.</p></div></div>
+        <div id="teamGrid" class="cards-list"></div>
+      </section>
+
+      <!-- PHANTOMBILD-SEITE -->
+      <section class="page" id="phantom">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">SPURENSICHERUNG</span>
+            <h1>Phantombild-Generator</h1>
+            <p>Stelle eine Person aus einzelnen Merkmalen zusammen.</p>
+          </div>
+          <div class="phantom-case-meta">
+            <input id="phantomCaseNumber" class="input" type="text" placeholder="Aktenzeichen...">
+            <input id="phantomName" class="input" type="text" placeholder="Name der Person...">
+            <label class="phantom-date-field">Dokumentdatum<input id="phantomDate" class="input" type="date"></label>
+          </div>
+        </div>
+
+        <div class="phantom-layout">
+          <div class="page-card phantom-controls" id="phantomControls">
+            <div class="panel-header">
+              <div>
+                <h2>Merkmale</h2>
+                <p id="phantomFeatureStatus">16 / 16 Merkmale aktiv</p>
+              </div>
+            </div>
+            <div class="feature-group" data-feature-group="face"><strong>Gesicht</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="skin"><strong>Haut</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="skinMarks"><strong>Hautmerkmale</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="hair"><strong>Haare</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="hairColor"><strong>Haarfarbe</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="eyes"><strong>Augen</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="eyeColor"><strong>Augenfarbe</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="eyeDetail"><strong>Augendetail</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="brows"><strong>Augenbrauen</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="nose"><strong>Nase</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="mouth"><strong>Mund</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="beard"><strong>Bart</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="age"><strong>Alter</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="expression"><strong>Ausdruck</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="ears"><strong>Ohren</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="scars"><strong>Narbe</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="tattoos"><strong>Tattoo</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="accessories"><strong>Accessoire</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="backgroundTone"><strong>Hintergrund</strong><div class="feature-options"></div></div>
+            <div class="feature-group" data-feature-group="renderMode"><strong>Darstellung</strong><div class="feature-options"></div></div>
+            <div class="phantom-fine-controls">
+              <div class="fine-controls-heading"><strong>Feineinstellungen</strong><span>Proportionen</span></div>
+              <label>Augenabstand <output id="eyeSpacingValue">50</output><input id="eyeSpacing" type="range" min="35" max="65" value="50"></label>
+              <label>Augenhöhe <output id="eyeHeightValue">50</output><input id="eyeHeight" type="range" min="38" max="62" value="50"></label>
+              <label>Nasendefinition <output id="noseDefinitionValue">50</output><input id="noseDefinition" type="range" min="20" max="80" value="50"></label>
+              <label>Hautdetail <output id="skinDetailValue">24</output><input id="skinDetail" type="range" min="0" max="100" value="24"></label>
+              <label>Augengröße <output id="eyeSizeValue">50</output><input id="eyeSize" type="range" min="35" max="70" value="50"></label>
+              <label>Wangenknochen <output id="cheekbonesValue">35</output><input id="cheekbones" type="range" min="0" max="100" value="35"></label>
+              <label>Bartdichte <output id="beardDensityValue">80</output><input id="beardDensity" type="range" min="20" max="100" value="80"></label>
+              <label>Gesichtssymmetrie <output id="faceSymmetryValue">50</output><input id="faceSymmetry" type="range" min="35" max="65" value="50"></label>
+              <label>Kieferbreite <output id="jawWidthValue">50</output><input id="jawWidth" type="range" min="35" max="65" value="50"></label>
+              <label>Stirnhöhe <output id="foreheadHeightValue">50</output><input id="foreheadHeight" type="range" min="35" max="65" value="50"></label>
+              <label>Mundbreite <output id="mouthWidthValue">50</output><input id="mouthWidth" type="range" min="35" max="65" value="50"></label>
+              <label>Ohrenhöhe <output id="earHeightValue">50</output><input id="earHeight" type="range" min="35" max="65" value="50"></label>
+              <label>Augenwinkel <output id="eyeTiltValue">50</output><input id="eyeTilt" type="range" min="35" max="65" value="50"></label>
+              <label>Nasenbreite <output id="noseWidthValue">50</output><input id="noseWidth" type="range" min="35" max="65" value="50"></label>
+              <label>Lippenfülle <output id="lipFullnessValue">50</output><input id="lipFullness" type="range" min="35" max="65" value="50"></label>
+              <label>Wangenfülle <output id="cheekFullnessValue">50</output><input id="cheekFullness" type="range" min="35" max="65" value="50"></label>
+              <label>Kinnlänge <output id="chinLengthValue">50</output><input id="chinLength" type="range" min="35" max="65" value="50"></label>
+              <label>Hautstruktur <output id="skinTextureValue">24</output><input id="skinTexture" type="range" min="0" max="100" value="24"></label>
+              <label>Brauenhöhe <output id="browHeightValue">50</output><input id="browHeight" type="range" min="35" max="65" value="50"></label>
+              <label>Nasenlänge <output id="noseLengthValue">50</output><input id="noseLength" type="range" min="35" max="65" value="50"></label>
+              <label>Nasenflügel <output id="nostrilWidthValue">50</output><input id="nostrilWidth" type="range" min="35" max="65" value="50"></label>
+              <label>Ohrgröße <output id="earSizeValue">50</output><input id="earSize" type="range" min="35" max="65" value="50"></label>
+              <label>Haarvolumen <output id="hairVolumeValue">50</output><input id="hairVolume" type="range" min="35" max="70" value="50"></label>
+              <label>Gesichtslicht <output id="faceLightValue">50</output><input id="faceLight" type="range" min="0" max="100" value="50"></label>
+              <label>Augenintensität <output id="eyeContrastValue">50</output><input id="eyeContrast" type="range" min="0" max="100" value="50"></label>
+              <label>Detailweichheit <output id="featureSoftnessValue">24</output><input id="featureSoftness" type="range" min="0" max="100" value="24"></label>
+              <label>Halsbreite <output id="neckWidthValue">50</output><input id="neckWidth" type="range" min="35" max="65" value="50"></label>
+              <div class="phantom-presets" aria-label="Schnellprofile">
+                <span>Stilprofil</span>
+                <button type="button" class="secondary phantom-preset" data-preset="neutral">Neutral</button>
+                <button type="button" class="secondary phantom-preset" data-preset="markant">Markant</button>
+                <button type="button" class="secondary phantom-preset" data-preset="reif">Reif</button>
+              </div>
+              <label class="fine-toggle"><input id="phantomGrid" type="checkbox"> Fahndungsraster anzeigen</label>
+            </div>
+            <div class="phantom-actions">
+              <button id="resetPhantomButton" class="secondary" type="button">Zurücksetzen</button>
+              <button id="randomPhantomButton" class="secondary" type="button">Zufallsprofil</button>
+              <button id="savePhantomProfileButton" class="secondary" type="button">Profil speichern</button>
+              <button id="loadPhantomProfileButton" class="secondary" type="button">Profil laden</button>
+              <button id="downloadPhantomButton" class="primary" type="button">Phantombild speichern</button>
+              <button id="downloadPhantomPngButton" class="secondary" type="button">PNG exportieren</button>
+              <button id="printPhantomButton" class="secondary" type="button">Drucken</button>
+            </div>
+          </div>
+          <div class="page-card phantom-preview-card">
+            <div class="panel-header">
+              <div>
+                <h2 id="phantomPreviewTitle">Unbekannte Person</h2>
+                <p>Aktuelle Rekonstruktion</p>
+              </div>
+            </div>
+            <div id="phantomCanvas" class="phantom-canvas"></div>
+            <div class="phantom-info-grid">
+              <span>Gesicht <strong id="infoFace">Oval</strong></span>
+              <span>Haare <strong id="infoHair">Kurz</strong></span>
+              <span>Augen <strong id="infoEyes">Rund</strong></span>
+              <span>Alter <strong id="infoAge">Jung</strong></span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <button id="tinyResetButton" class="tiny-reset-button" type="button" title="Gespeicherte Daten löschen" aria-label="Gespeicherte Daten löschen">Reset</button>
+
+  <div class="modal" id="caseModal" data-modal>
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <span class="eyebrow">MISSION</span>
+          <h2>Fall hinzufügen</h2>
+        </div>
+        <button class="close" type="button" data-close="caseModal">×</button>
+      </div>
+      <form id="caseForm">
+        <input id="caseName" type="text" placeholder="Name des Falls" required>
+        <textarea id="caseDescription" placeholder="Beschreibung des Falls..."></textarea>
+        <select id="casePriority">
+          <option value="high">🔴 Hoch</option>
+          <option value="medium" selected>🟠 Mittel</option>
+          <option value="low">🟢 Niedrig</option>
+        </select>
+        <select id="caseStatus">
+          <option value="open">Offen</option>
+          <option value="progress">In Arbeit</option>
+          <option value="done">Gelöst</option>
+        </select>
+        <button type="submit" class="primary full">Fall speichern</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="script_fixed.js"></script>
+
+</body>
+</html>
+rr
