@@ -6475,4 +6475,12 @@ document.addEventListener("DOMContentLoaded", () => {
     "🌶️ script_fixed.js erfolgreich geladen."
   );
 
-});
+});console.log("CHAT TEST GELADEN");
+
+const testButton = document.getElementById("sendMessage");
+
+if (testButton) {
+  testButton.addEventListener("click", () => {
+    alert("Der Senden-Knopf funktioniert!");
+  });
+}
