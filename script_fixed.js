@@ -1,12 +1,13 @@
 ﻿// ========================================
 // 🌶️ SCHILISCHOTEN-AGENTEN
-// FIXED.JS
+// SCRIPT_FIXED.JS
 // ========================================
 
 document.addEventListener("DOMContentLoaded", () => {
+  "use strict";
 
   // ========================================
-  // HILFSFUNKTION
+  // HILFSFUNKTIONEN
   // ========================================
 
   function escapeHTML(value) {
@@ -15,6 +16,58 @@ document.addEventListener("DOMContentLoaded", () => {
     return div.innerHTML;
   }
 
+  function safeParseArray(value) {
+    try {
+      const parsed = JSON.parse(value || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function showTemporaryMessage(title, text) {
+    document.getElementById("appToast")?.remove();
+
+    const toast = document.createElement("div");
+    toast.id = "appToast";
+    toast.className = "notification-toast";
+
+    toast.innerHTML = `
+      <strong>${escapeHTML(title)}</strong>
+      <span>${escapeHTML(text)}</span>
+    `;
+
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      toast.classList.add("visible");
+    });
+
+    window.setTimeout(() => {
+      toast.classList.remove("visible");
+      window.setTimeout(() => toast.remove(), 250);
+    }, 3500);
+  }
+
+  function formatTime(timestamp) {
+    if (!timestamp) {
+      return new Date().toLocaleTimeString("de-DE", {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    const date = new Date(Number(timestamp));
+
+    if (Number.isNaN(date.getTime())) {
+      return String(timestamp);
+    }
+
+    return date.toLocaleTimeString("de-DE", {
+      hour: "2-digit",
+      minute: "2-digit"
+    });
+  }
 
   // ========================================
   // NAVIGATION
@@ -69,22 +122,17 @@ document.addEventListener("DOMContentLoaded", () => {
     ]
   };
 
-
   function showPage(pageName) {
+    const targetPage = document.getElementById(pageName);
 
-    const targetPage =
-      document.getElementById(pageName);
+    if (!targetPage) {
+      console.warn("Seite nicht gefunden:", pageName);
+      return;
+    }
 
-    if (!targetPage) return;
-
-    document
-      .querySelectorAll(".page")
-      .forEach(page => {
-        page.classList.toggle(
-          "active",
-          page.id === pageName
-        );
-      });
+    document.querySelectorAll(".page").forEach(page => {
+      page.classList.toggle("active", page.id === pageName);
+    });
 
     navButtons.forEach(button => {
       button.classList.toggle(
@@ -93,52 +141,23 @@ document.addEventListener("DOMContentLoaded", () => {
       );
     });
 
-    const info =
-      pageInfo[pageName];
-
-    const title =
-      document.getElementById("pageTitle");
-
-    const subtitle =
-      document.getElementById("pageSubtitle");
+    const info = pageInfo[pageName];
+    const title = document.getElementById("pageTitle");
+    const subtitle = document.getElementById("pageSubtitle");
 
     if (info) {
       if (title) title.textContent = info[0];
       if (subtitle) subtitle.textContent = info[1];
     }
 
-    if (pageName === "dashboard") {
-      renderDashboard();
-    }
-
-    if (pageName === "cases") {
-      renderCases();
-    }
-
-    if (pageName === "evidence") {
-      renderEvidence();
-    }
-
-    if (pageName === "suspects") {
-      renderSuspects();
-    }
-
-    if (pageName === "team") {
-      renderTeam();
-    }
-
-    if (pageName === "stats") {
-      renderStats();
-    }
-
-    if (pageName === "phantom") {
-      renderPhantom();
-    }
-
-    if (pageName === "chat") {
-      renderCloudChat();
-    }
-
+    if (pageName === "dashboard") renderDashboard();
+    if (pageName === "cases") renderCases();
+    if (pageName === "evidence") renderEvidence();
+    if (pageName === "suspects") renderSuspects();
+    if (pageName === "team") renderTeam();
+    if (pageName === "stats") renderStats();
+    if (pageName === "phantom") renderPhantom();
+    if (pageName === "chat") renderCloudChat();
     if (pageName === "research") {
       renderResearch(
         document.getElementById("researchAddress")?.value || ""
@@ -146,25 +165,20 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
   navButtons.forEach(button => {
     button.addEventListener("click", () => {
       showPage(button.dataset.page);
     });
   });
 
-
-  document
-    .querySelectorAll("[data-goto]")
-    .forEach(button => {
-      button.addEventListener("click", () => {
-        showPage(button.dataset.goto);
-      });
+  document.querySelectorAll("[data-goto]").forEach(button => {
+    button.addEventListener("click", () => {
+      showPage(button.dataset.goto);
     });
-
+  });
 
   // ========================================
-  // DATENSPEICHERUNG
+  // LOKALER DATENSPEICHER
   // ========================================
 
   const STORAGE = {
@@ -174,53 +188,44 @@ document.addEventListener("DOMContentLoaded", () => {
     messages: "schilischoten_messages"
   };
 
+  let cases = safeParseArray(
+    localStorage.getItem(STORAGE.cases)
+  );
 
-  function readArray(key) {
-    try {
-      const value = JSON.parse(
-        localStorage.getItem(key) || "[]"
-      );
+  let evidence = safeParseArray(
+    localStorage.getItem(STORAGE.evidence)
+  );
 
-      return Array.isArray(value) ? value : [];
-    } catch {
-      return [];
-    }
-  }
+  let suspects = safeParseArray(
+    localStorage.getItem(STORAGE.suspects)
+  );
 
-
-  let cases = readArray(STORAGE.cases);
-  let evidence = readArray(STORAGE.evidence);
-  let suspects = readArray(STORAGE.suspects);
-
-  // Lokale Nachrichten dienen nur als Fallback/Statistik.
-  let messages = readArray(STORAGE.messages);
-
+  let messages = safeParseArray(
+    localStorage.getItem(STORAGE.messages)
+  );
 
   // Alte KI-/Demo-Fälle entfernen
   cases = cases.filter(item => {
-
     if (!item || typeof item !== "object") {
       return false;
     }
 
-    const source =
-      String(
-        item.source ||
-        item.createdBy ||
-        item.origin ||
-        ""
-      )
-        .trim()
-        .toLowerCase();
+    const source = String(
+      item.source ||
+      item.createdBy ||
+      item.origin ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
 
-    const label =
-      String(
-        item.name ||
-        item.title ||
-        ""
-      )
-        .trim()
-        .toLowerCase();
+    const label = String(
+      item.name ||
+      item.title ||
+      ""
+    )
+      .trim()
+      .toLowerCase();
 
     const aiFlag =
       item.aiGenerated === true ||
@@ -251,9 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
     JSON.stringify(cases)
   );
 
-
   function saveData() {
-
     localStorage.setItem(
       STORAGE.cases,
       JSON.stringify(cases)
@@ -275,25 +278,20 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-
   // ========================================
   // DASHBOARD
   // ========================================
 
   function renderDashboard() {
+    const active = cases.filter(
+      item =>
+        item.status === "open" ||
+        item.status === "progress"
+    ).length;
 
-    const active =
-      cases.filter(
-        item =>
-          item.status === "open" ||
-          item.status === "progress"
-      ).length;
-
-    const solved =
-      cases.filter(
-        item =>
-          item.status === "done"
-      ).length;
+    const solved = cases.filter(
+      item => item.status === "done"
+    ).length;
 
     const values = {
       activeCasesCount: active,
@@ -302,24 +300,16 @@ document.addEventListener("DOMContentLoaded", () => {
       solvedCasesCount: solved
     };
 
-    Object.entries(values).forEach(
-      ([id, value]) => {
-        const element =
-          document.getElementById(id);
-
-        if (element) {
-          element.textContent = String(value);
-        }
+    Object.entries(values).forEach(([id, value]) => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.textContent = String(value);
       }
-    );
+    });
 
     const list =
-      document.getElementById(
-        "dashboardCasesList"
-      ) ||
-      document.getElementById(
-        "dashboardCases"
-      );
+      document.getElementById("dashboardCasesList") ||
+      document.getElementById("dashboardCases");
 
     if (!list) return;
 
@@ -332,96 +322,69 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    list.innerHTML =
-      cases
-        .slice(0, 5)
-        .map(item => `
-          <div class="case-card">
-            <div class="case-meta">
-              <div>
-                <h3>
-                  ${escapeHTML(
-                    item.name ||
-                    "Unbenannter Fall"
-                  )}
-                </h3>
+    list.innerHTML = cases
+      .slice(0, 5)
+      .map(item => `
+        <div class="case-card">
+          <div class="case-meta">
+            <div>
+              <h3>
+                ${escapeHTML(item.name || "Unbenannter Fall")}
+              </h3>
 
-                <p>
-                  ${escapeHTML(
-                    item.description ||
-                    "Keine Beschreibung"
-                  )}
-                </p>
-              </div>
-
-              <span class="status ${
-                escapeHTML(
-                  item.status ||
-                  "open"
-                )
-              }">
+              <p>
                 ${escapeHTML(
-                  item.status ||
-                  "open"
+                  item.description || "Keine Beschreibung"
                 )}
-              </span>
+              </p>
             </div>
-          </div>
-        `)
-        .join("");
-  }
 
+            <span class="status ${escapeHTML(
+              item.status || "open"
+            )}">
+              ${escapeHTML(item.status || "open")}
+            </span>
+          </div>
+        </div>
+      `)
+      .join("");
+  }
 
   // ========================================
   // FÄLLE
   // ========================================
 
   function renderCases() {
-
-    const list =
-      document.getElementById(
-        "casesList"
-      );
+    const list = document.getElementById("casesList");
 
     if (!list) return;
 
     const search =
-      (
-        document.getElementById(
-          "caseSearch"
-        )?.value ||
-        ""
-      )
+      document
+        .getElementById("caseSearch")
+        ?.value
         .trim()
-        .toLowerCase();
+        .toLowerCase() || "";
 
     const filter =
-      document.getElementById(
-        "caseFilter"
-      )?.value ||
+      document.getElementById("caseFilter")?.value ||
       "all";
 
-    const filtered =
-      cases.filter(item => {
+    const filtered = cases.filter(item => {
+      const text = `
+        ${item.name || ""}
+        ${item.description || ""}
+      `.toLowerCase();
 
-        const text =
-          `${item.name || ""} ${
-            item.description || ""
-          }`.toLowerCase();
+      const matchesText =
+        !search || text.includes(search);
 
-        const matchesText =
-          !search ||
-          text.includes(search);
+      const matchesFilter =
+        filter === "all" ||
+        item.status === filter;
 
-        const matchesFilter =
-          filter === "all" ||
-          item.status === filter;
-
-        return (
-          matchesText &&
-          matchesFilter
-        );
-      });
+      return matchesText && matchesFilter;
+    });
 
     if (!filtered.length) {
       list.innerHTML = `
@@ -432,240 +395,148 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    list.innerHTML =
-      filtered
-        .map(item => `
-          <article class="case-card">
+    list.innerHTML = filtered
+      .map(item => `
+        <article class="case-card">
 
-            <div class="case-meta">
+          <div class="case-meta">
 
-              <div>
-
-                <h3>
-                  ${escapeHTML(
-                    item.name ||
-                    "Unbenannter Fall"
-                  )}
-                </h3>
-
-                <small>
-                  Priorität:
-                  ${escapeHTML(
-                    item.priority ||
-                    "medium"
-                  )}
-                </small>
-
-              </div>
-
-              <span class="status ${
-                escapeHTML(
-                  item.status ||
-                  "open"
-                )
-              }">
+            <div>
+              <h3>
                 ${escapeHTML(
-                  item.status ||
-                  "open"
+                  item.name || "Unbenannter Fall"
                 )}
-              </span>
+              </h3>
 
+              <small>
+                Priorität:
+                ${escapeHTML(
+                  item.priority || "medium"
+                )}
+              </small>
             </div>
 
-            <p>
+            <span class="status ${escapeHTML(
+              item.status || "open"
+            )}">
               ${escapeHTML(
-                item.description ||
-                "Keine Beschreibung"
+                item.status || "open"
               )}
-            </p>
+            </span>
 
-          </article>
-        `)
-        .join("");
+          </div>
+
+          <p>
+            ${escapeHTML(
+              item.description || "Keine Beschreibung"
+            )}
+          </p>
+
+        </article>
+      `)
+      .join("");
   }
-
 
   document
     .getElementById("caseSearch")
-    ?.addEventListener(
-      "input",
-      renderCases
-    );
-
+    ?.addEventListener("input", renderCases);
 
   document
     .getElementById("caseFilter")
-    ?.addEventListener(
-      "change",
-      renderCases
-    );
-
+    ?.addEventListener("change", renderCases);
 
   // ========================================
   // FALL-MODAL
   // ========================================
 
   const caseModal =
-    document.getElementById(
-      "caseModal"
-    );
-
+    document.getElementById("caseModal");
 
   function openCaseModal() {
     caseModal?.classList.add("show");
   }
 
-
   document
     .getElementById("newCaseButton")
-    ?.addEventListener(
-      "click",
-      openCaseModal
-    );
-
+    ?.addEventListener("click", openCaseModal);
 
   document
     .getElementById("dashboardNewCase")
-    ?.addEventListener(
-      "click",
-      openCaseModal
-    );
-
+    ?.addEventListener("click", openCaseModal);
 
   document
     .getElementById("caseForm")
-    ?.addEventListener(
-      "submit",
-      event => {
+    ?.addEventListener("submit", event => {
+      event.preventDefault();
 
-        event.preventDefault();
+      const name =
+        document.getElementById("caseName")?.value.trim();
 
-        const name =
+      if (!name) return;
+
+      const newCase = {
+        id: Date.now(),
+        name,
+        description:
           document
-            .getElementById("caseName")
+            .getElementById("caseDescription")
             ?.value
-            .trim();
+            .trim() || "",
+        priority:
+          document.getElementById("casePriority")?.value ||
+          "medium",
+        status:
+          document.getElementById("caseStatus")?.value ||
+          "open",
+        createdAt: new Date().toISOString(),
+        source: "user"
+      };
 
-        if (!name) return;
+      cases.unshift(newCase);
 
-        cases.unshift({
+      saveData();
+      renderAll();
 
-          id:
-            Date.now(),
+      caseModal?.classList.remove("show");
 
-          name:
-
-            name,
-
-          description:
-            document
-              .getElementById(
-                "caseDescription"
-              )
-              ?.value
-              .trim() || "",
-
-          priority:
-            document
-              .getElementById(
-                "casePriority"
-              )
-              ?.value ||
-            "medium",
-
-          status:
-            document
-              .getElementById(
-                "caseStatus"
-              )
-              ?.value ||
-            "open",
-
-          createdAt:
-            new Date()
-              .toISOString(),
-
-          source:
-            "user"
-        });
-
-        saveData();
-        renderAll();
-
-        caseModal?.classList.remove("show");
-
+      if (event.target instanceof HTMLFormElement) {
         event.target.reset();
       }
-    );
-
+    });
 
   // ========================================
   // MODALS
   // ========================================
 
-  document
-    .querySelectorAll("[data-close]")
-    .forEach(button => {
-
-      button.addEventListener(
-        "click",
-        () => {
-
-          document
-            .getElementById(
-              button.dataset.close
-            )
-            ?.classList.remove(
-              "show"
-            );
-        }
-      );
+  document.querySelectorAll("[data-close]").forEach(button => {
+    button.addEventListener("click", () => {
+      document
+        .getElementById(button.dataset.close)
+        ?.classList.remove("show");
     });
+  });
 
-
-  document
-    .querySelectorAll(".modal")
-    .forEach(modal => {
-
-      modal.addEventListener(
-        "click",
-        event => {
-
-          if (
-            event.target === modal
-          ) {
-
-            modal.classList.remove(
-              "show"
-            );
-          }
-        }
-      );
-    });
-
-
-  document.addEventListener(
-    "keydown",
-    event => {
-
-      if (event.key === "Escape") {
-
-        document
-          .querySelectorAll(".modal")
-          .forEach(modal => {
-            modal.classList.remove("show");
-          });
+  document.querySelectorAll(".modal").forEach(modal => {
+    modal.addEventListener("click", event => {
+      if (event.target === modal) {
+        modal.classList.remove("show");
       }
-    }
-  );
+    });
+  });
 
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      document.querySelectorAll(".modal").forEach(modal => {
+        modal.classList.remove("show");
+      });
+    }
+  });
 
   // ========================================
   // PHANTOMBILD
   // ========================================
 
   const phantomOptions = {
-
     face: [
       "Oval",
       "Rund",
@@ -836,22 +707,13 @@ document.addEventListener("DOMContentLoaded", () => {
     ]
   };
 
-
-  const phantomState =
-    Object.fromEntries(
-      Object.entries(
-        phantomOptions
-      ).map(
-        ([key, values]) => [
-          key,
-          values[0]
-        ]
-      )
-    );
-
+  const phantomState = Object.fromEntries(
+    Object.entries(phantomOptions).map(
+      ([key, values]) => [key, values[0]]
+    )
+  );
 
   const phantomFineState = {
-
     eyeSpacing: 50,
     eyeHeight: 50,
     noseDefinition: 50,
@@ -882,60 +744,36 @@ document.addEventListener("DOMContentLoaded", () => {
     phantomGrid: false
   };
 
-
   const phantomControls =
-    document.getElementById(
-      "phantomControls"
-    );
+    document.getElementById("phantomControls");
 
   const phantomCanvas =
-    document.getElementById(
-      "phantomCanvas"
-    );
+    document.getElementById("phantomCanvas");
 
   const phantomName =
-    document.getElementById(
-      "phantomName"
-    );
+    document.getElementById("phantomName");
 
   const phantomCaseNumber =
-    document.getElementById(
-      "phantomCaseNumber"
-    );
+    document.getElementById("phantomCaseNumber");
 
   const phantomDate =
-    document.getElementById(
-      "phantomDate"
-    );
-
+    document.getElementById("phantomDate");
 
   function getSkinColor() {
-
-    switch (
-      phantomState.skin
-    ) {
-
+    switch (phantomState.skin) {
       case "Hell":
         return "#efc7ab";
-
       case "Dunkel":
         return "#7e503e";
-
       case "Sehr hell":
         return "#f4d9c1";
-
       default:
         return "#c98f70";
     }
   }
 
-
   function faceShape() {
-
-    switch (
-      phantomState.face
-    ) {
-
+    switch (phantomState.face) {
       case "Rund":
         return `
           <ellipse
@@ -1033,9 +871,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
   function earsSVG(skin) {
-
     let rx =
       27 *
       (
@@ -1049,16 +885,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const earY =
       350 +
       (
-        phantomFineState.earHeight -
-        50
+        phantomFineState.earHeight - 50
       ) *
       1.2;
 
-    if (
-      phantomState.ears ===
-      "Groß"
-    ) {
-
+    if (phantomState.ears === "Groß") {
       rx =
         36 *
         (
@@ -1070,11 +901,7 @@ document.addEventListener("DOMContentLoaded", () => {
       rightX = 458;
     }
 
-    if (
-      phantomState.ears ===
-      "Abstehend"
-    ) {
-
+    if (phantomState.ears === "Abstehend") {
       leftX = 134;
       rightX = 466;
 
@@ -1109,10 +936,8 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-
   function hairSVG() {
-
-    const hairColors = {
+    const colors = {
       Schwarz: "#171719",
       Braun: "#4a2d22",
       Blond: "#b9854e",
@@ -1121,17 +946,10 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const color =
-      hairColors[
-        phantomState.hairColor
-      ] ||
-      "#171719";
+      colors[phantomState.hairColor] ||
+      colors.Schwarz;
 
-
-    if (
-      phantomState.hair ===
-      "Glatze"
-    ) {
-
+    if (phantomState.hair === "Glatze") {
       return `
         <path
           d="
@@ -1147,435 +965,14 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
-
-    if (
-      phantomState.hair ===
-      "Locken"
-    ) {
-
-      return `
-        <g
-          fill="url(#hairGradient)"
-          stroke="#131315"
-          stroke-width="1.8"
-        >
-
-          <path
-            d="
-              M174 286
-              Q178 166 300 143
-              Q422 166 426 286
-              Q388 220 300 220
-              Q212 220 174 286
-              Z
-            "
-          />
-
-          <circle cx="207" cy="230" r="30" />
-          <circle cx="246" cy="198" r="35" />
-          <circle cx="300" cy="184" r="38" />
-          <circle cx="354" cy="198" r="35" />
-          <circle cx="393" cy="230" r="30" />
-          <circle cx="193" cy="263" r="24" />
-          <circle cx="407" cy="263" r="24" />
-
-        </g>
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Irokese"
-    ) {
-
-      return `
-        <path
-          d="
-            M248 282
-            L258 165
-            Q300 98 342 165
-            L352 282
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#131315"
-          stroke-width="3"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Lang"
-    ) {
-
-      return `
-        <path
-          d="
-            M174 286
-            Q178 165 300 143
-            Q422 165 426 286
-            Q390 220 300 220
-            Q210 220 174 286
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#131315"
-          stroke-width="2.2"
-        />
-
-        <path
-          d="
-            M174 270
-            Q164 360 190 520
-            Q208 548 232 520
-            L246 238
-            Q212 244 174 270
-            Z
-
-            M426 270
-            Q436 360 410 520
-            Q392 548 368 520
-            L354 238
-            Q388 244 426 270
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#131315"
-          stroke-width="2.2"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Mittellang"
-    ) {
-
-      return `
-        <path
-          d="
-            M174 286
-            Q178 165 300 143
-            Q422 165 426 286
-            Q390 220 300 220
-            Q210 220 174 286
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#131315"
-          stroke-width="2.2"
-        />
-
-        <path
-          d="
-            M174 270
-            Q170 340 190 444
-            Q204 464 224 442
-            L238 238
-            Q208 244 174 270
-            Z
-
-            M426 270
-            Q430 340 410 444
-            Q396 464 376 442
-            L362 238
-            Q392 244 426 270
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#131315"
-          stroke-width="2.2"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Seitenscheitel"
-    ) {
-
-      return `
-        <path
-          d="
-            M174 286
-            Q178 165 300 143
-            Q422 165 426 286
-            Q374 225 278 224
-            Q224 225 174 286
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#151316"
-          stroke-width="2.5"
-        />
-
-        <path
-          d="
-            M338 158
-            Q316 190 302 224
-          "
-          fill="none"
-          stroke="#0f1114"
-          stroke-width="2"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Wellig"
-    ) {
-
-      return `
-        <path
-          d="
-            M174 292
-            Q174 170 300 143
-            Q426 170 426 292
-            Q392 232 350 225
-            Q300 207 250 225
-            Q208 232 174 292
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#151316"
-          stroke-width="2.5"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Undercut"
-    ) {
-
-      return `
-        <path
-          d="
-            M190 274
-            Q205 156 300 143
-            Q395 156 410 274
-            Q365 224 300 224
-            Q235 224 190 274
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#151316"
-          stroke-width="2.5"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Buzz Cut"
-    ) {
-
-      return `
-        <path
-          d="
-            M180 286
-            Q188 174 300 146
-            Q412 174 420 286
-            Q378 226 300 220
-            Q222 226 180 286
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#151316"
-          stroke-width="2.5"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Pompadour"
-    ) {
-
-      return `
-        <path
-          d="
-            M174 286
-            Q178 142 300 116
-            Q422 142 426 286
-            Q382 218 300 220
-            Q218 218 174 286
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#151316"
-          stroke-width="2.5"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Zopf"
-    ) {
-
-      return `
-        <path
-          d="
-            M174 286
-            Q178 165 300 143
-            Q422 165 426 286
-            Q390 220 300 220
-            Q210 220 174 286
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#151316"
-          stroke-width="2.5"
-        />
-
-        <path
-          d="
-            M412 286
-            Q455 330 425 380
-            Q465 425 425 470
-          "
-          fill="none"
-          stroke="${color}"
-          stroke-width="28"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Afro"
-    ) {
-
-      return `
-        <path
-          d="
-            M160 300
-            Q160 126 300 112
-            Q440 126 440 300
-            Q410 244 300 232
-            Q190 244 160 300
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#151316"
-          stroke-width="2.5"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Dreadlocks"
-    ) {
-
-      return `
-        <path
-          d="
-            M174 286
-            Q178 165 300 143
-            Q422 165 426 286
-            Q390 220 300 220
-            Q210 220 174 286
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#151316"
-          stroke-width="2.5"
-        />
-
-        <g
-          fill="${color}"
-          stroke="#111"
-          stroke-width="1.5"
-        >
-          <path d="M190 250 Q180 340 181 420 Q188 452 205 430 L218 242 Q204 244 190 250 Z" />
-          <path d="M224 230 Q218 350 220 456 Q230 490 246 462 L252 230 Q238 228 224 230 Z" />
-          <path d="M348 230 Q352 350 350 462 Q366 490 376 456 L376 230 Q362 228 348 230 Z" />
-          <path d="M382 242 Q394 340 395 430 Q412 452 419 420 Q420 340 410 250 Q396 244 382 242 Z" />
-        </g>
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Pferdeschwanz"
-    ) {
-
-      return `
-        <path
-          d="
-            M174 286
-            Q178 165 300 143
-            Q422 165 426 286
-            Q390 220 300 220
-            Q210 220 174 286
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#151316"
-          stroke-width="2.5"
-        />
-
-        <path
-          d="
-            M410 230
-            Q480 260 458 360
-            Q446 420 405 454
-          "
-          fill="none"
-          stroke="${color}"
-          stroke-width="25"
-        />
-      `;
-    }
-
-
-    if (
-      phantomState.hair ===
-      "Slick Back"
-    ) {
-
-      return `
-        <path
-          d="
-            M174 286
-            Q180 160 300 143
-            Q420 160 426 286
-            Q374 214 300 214
-            Q226 214 174 286
-            Z
-          "
-          fill="url(#hairGradient)"
-          stroke="#151316"
-          stroke-width="2.5"
-        />
-      `;
-    }
-
-
-    return `
+    const base = `
       <path
         d="
           M174 286
-          Q177 165 300 143
-          Q423 165 426 286
-          Q392 215 300 219
-          Q208 215 174 286
+          Q178 165 300 143
+          Q422 165 426 286
+          Q390 220 300 220
+          Q210 220 174 286
           Z
         "
         fill="url(#hairGradient)"
@@ -1583,11 +980,326 @@ document.addEventListener("DOMContentLoaded", () => {
         stroke-width="2.5"
       />
     `;
+
+    switch (phantomState.hair) {
+      case "Irokese":
+        return `
+          <path
+            d="
+              M248 282
+              L258 165
+              Q300 98 342 165
+              L352 282
+              Z
+            "
+            fill="url(#hairGradient)"
+            stroke="#131315"
+            stroke-width="3"
+          />
+        `;
+
+      case "Lang":
+        return `
+          ${base}
+          <path
+            d="
+              M174 270
+              Q164 360 190 520
+              Q208 548 232 520
+              L246 238
+              Q212 244 174 270
+              Z
+            "
+            fill="url(#hairGradient)"
+            stroke="#151316"
+            stroke-width="2"
+          />
+
+          <path
+            d="
+              M426 270
+              Q436 360 410 520
+              Q392 548 368 520
+              L354 238
+              Q388 244 426 270
+              Z
+            "
+            fill="url(#hairGradient)"
+            stroke="#151316"
+            stroke-width="2"
+          />
+        `;
+
+      case "Mittellang":
+        return `
+          ${base}
+          <path
+            d="
+              M174 270
+              Q170 340 190 444
+              Q204 464 224 442
+              L238 238
+              Q208 244 174 270
+              Z
+            "
+            fill="url(#hairGradient)"
+          />
+
+          <path
+            d="
+              M426 270
+              Q430 340 410 444
+              Q396 464 376 442
+              L362 238
+              Q392 244 426 270
+              Z
+            "
+            fill="url(#hairGradient)"
+          />
+        `;
+
+      case "Seitenscheitel":
+        return `
+          ${base}
+          <path
+            d="
+              M338 158
+              Q316 190 302 224
+            "
+            fill="none"
+            stroke="#0f1114"
+            stroke-width="2"
+          />
+        `;
+
+      case "Wellig":
+        return `
+          <path
+            d="
+              M174 292
+              Q174 170 300 143
+              Q426 170 426 292
+              Q392 232 350 225
+              Q300 207 250 225
+              Q208 232 174 292
+              Z
+            "
+            fill="url(#hairGradient)"
+            stroke="#151316"
+            stroke-width="2.5"
+          />
+        `;
+
+      case "Undercut":
+        return `
+          <path
+            d="
+              M190 274
+              Q205 156 300 143
+              Q395 156 410 274
+              Q365 224 300 224
+              Q235 224 190 274
+              Z
+            "
+            fill="url(#hairGradient)"
+            stroke="#151316"
+            stroke-width="2.5"
+          />
+        `;
+
+      case "Buzz Cut":
+        return `
+          <path
+            d="
+              M180 286
+              Q188 174 300 146
+              Q412 174 420 286
+              Q378 226 300 220
+              Q222 226 180 286
+              Z
+            "
+            fill="url(#hairGradient)"
+            stroke="#151316"
+            stroke-width="2.5"
+          />
+        `;
+
+      case "Pompadour":
+        return `
+          <path
+            d="
+              M174 286
+              Q178 142 300 116
+              Q422 142 426 286
+              Q382 218 300 220
+              Q218 218 174 286
+              Z
+            "
+            fill="url(#hairGradient)"
+            stroke="#151316"
+            stroke-width="2.5"
+          />
+        `;
+
+      case "Zopf":
+        return `
+          ${base}
+
+          <path
+            d="
+              M412 286
+              Q455 330 425 380
+              Q465 425 425 470
+            "
+            fill="none"
+            stroke="${color}"
+            stroke-width="28"
+          />
+        `;
+
+      case "Afro":
+        return `
+          <path
+            d="
+              M160 300
+              Q160 126 300 112
+              Q440 126 440 300
+              Q410 244 300 232
+              Q190 244 160 300
+              Z
+            "
+            fill="url(#hairGradient)"
+            stroke="#151316"
+            stroke-width="2.5"
+          />
+        `;
+
+      case "Dreadlocks":
+        return `
+          ${base}
+
+          <g
+            fill="${color}"
+            stroke="#111"
+            stroke-width="1.5"
+          >
+
+            <path
+              d="
+                M190 250
+                Q180 340 181 420
+                Q188 452 205 430
+                L218 242
+                Q204 244 190 250
+                Z
+              "
+            />
+
+            <path
+              d="
+                M224 230
+                Q218 350 220 456
+                Q230 490 246 462
+                L252 230
+                Q238 228 224 230
+                Z
+              "
+            />
+
+            <path
+              d="
+                M348 230
+                Q352 350 350 462
+                Q366 490 376 456
+                L376 230
+                Q362 228 348 230
+                Z
+              "
+            />
+
+            <path
+              d="
+                M382 242
+                Q394 340 395 430
+                Q412 452 419 420
+                Q420 340 410 250
+                Q396 244 382 242
+                Z
+              "
+            />
+
+          </g>
+        `;
+
+      case "Pferdeschwanz":
+        return `
+          ${base}
+
+          <path
+            d="
+              M410 230
+              Q480 260 458 360
+              Q446 420 405 454
+            "
+            fill="none"
+            stroke="${color}"
+            stroke-width="25"
+          />
+        `;
+
+      case "Slick Back":
+        return `
+          <path
+            d="
+              M174 286
+              Q180 160 300 143
+              Q420 160 426 286
+              Q374 214 300 214
+              Q226 214 174 286
+              Z
+            "
+            fill="url(#hairGradient)"
+            stroke="#151316"
+            stroke-width="2.5"
+          />
+        `;
+
+      case "Locken":
+        return `
+          <g
+            fill="url(#hairGradient)"
+            stroke="#131315"
+            stroke-width="1.8"
+          >
+
+            <path
+              d="
+                M174 286
+                Q178 166 300 143
+                Q422 166 426 286
+                Q388 220 300 220
+                Q212 220 174 286
+                Z
+              "
+            />
+
+            <circle cx="207" cy="230" r="30" />
+            <circle cx="246" cy="198" r="35" />
+            <circle cx="300" cy="184" r="38" />
+            <circle cx="354" cy="198" r="35" />
+            <circle cx="393" cy="230" r="30" />
+            <circle cx="193" cy="263" r="24" />
+            <circle cx="407" cy="263" r="24" />
+
+          </g>
+        `;
+
+      default:
+        return base;
+    }
   }
 
-
   function eyesSVG() {
-
     const eyeShapes = {
       Rund: [31, 16],
       Schmal: [25, 9],
@@ -1596,15 +1308,12 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const [rx, ry] =
-      eyeShapes[
-        phantomState.eyes
-      ] ||
+      eyeShapes[phantomState.eyes] ||
       eyeShapes.Rund;
 
     const eyeScale =
       0.82 +
-      phantomFineState.eyeSize /
-      250;
+      phantomFineState.eyeSize / 250;
 
     const irisColors = {
       Braun: "#583727",
@@ -1614,9 +1323,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const iris =
-      irisColors[
-        phantomState.eyeColor
-      ] ||
+      irisColors[phantomState.eyeColor] ||
       irisColors.Braun;
 
     const eyeOffset =
@@ -1634,7 +1341,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ) *
       0.7;
 
-    const eyeTiltOffset =
+    const tilt =
       (
         phantomFineState.eyeTilt -
         50
@@ -1656,18 +1363,15 @@ document.addEventListener("DOMContentLoaded", () => {
       0.5;
 
     const leftEye =
-      246 -
-      eyeOffset;
+      246 - eyeOffset;
 
     const rightEye =
-      354 +
-      eyeOffset;
+      354 + eyeOffset;
 
     return `
-
       <ellipse
         cx="${leftEye}"
-        cy="${eyeY - eyeTiltOffset}"
+        cy="${eyeY - tilt}"
         rx="${(rx * eyeScale).toFixed(1)}"
         ry="${(ry * eyeScale).toFixed(1)}"
         fill="url(#eyeWhite)"
@@ -1677,7 +1381,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <ellipse
         cx="${rightEye}"
-        cy="${eyeY + eyeTiltOffset + asymmetry}"
+        cy="${eyeY + tilt + asymmetry}"
         rx="${(rx * eyeScale).toFixed(1)}"
         ry="${(ry * eyeScale).toFixed(1)}"
         fill="url(#eyeWhite)"
@@ -1687,30 +1391,52 @@ document.addEventListener("DOMContentLoaded", () => {
 
       <circle
         cx="${leftEye}"
-        cy="${eyeY - eyeTiltOffset}"
+        cy="${eyeY - tilt}"
         r="9"
         fill="${iris}"
+        opacity="${(
+          0.7 +
+          phantomFineState.eyeContrast / 333
+        ).toFixed(3)}"
       />
 
       <circle
         cx="${rightEye}"
-        cy="${eyeY + eyeTiltOffset + asymmetry}"
+        cy="${eyeY + tilt + asymmetry}"
         r="9"
         fill="${iris}"
+        opacity="${(
+          0.7 +
+          phantomFineState.eyeContrast / 333
+        ).toFixed(3)}"
       />
 
       <circle
         cx="${leftEye}"
-        cy="${eyeY - eyeTiltOffset}"
+        cy="${eyeY - tilt}"
         r="4"
         fill="#111820"
       />
 
       <circle
         cx="${rightEye}"
-        cy="${eyeY + eyeTiltOffset + asymmetry}"
+        cy="${eyeY + tilt + asymmetry}"
         r="4"
         fill="#111820"
+      />
+
+      <circle
+        cx="${leftEye + 3}"
+        cy="${eyeY - tilt - 3}"
+        r="3"
+        fill="#fff"
+      />
+
+      <circle
+        cx="${rightEye + 3}"
+        cy="${eyeY + tilt + asymmetry - 3}"
+        r="3"
+        fill="#fff"
       />
 
       <path
@@ -1740,22 +1466,62 @@ document.addEventListener("DOMContentLoaded", () => {
         stroke="#563e39"
         stroke-width="2.5"
       />
+
+      ${
+        phantomState.eyeDetail === "Augenringe"
+          ? `
+            <path
+              d="
+                M216 359
+                Q246 382 276 359
+
+                M324 359
+                Q354 382 384 359
+              "
+              fill="none"
+              stroke="#694943"
+              stroke-width="2.5"
+              opacity=".25"
+            />
+          `
+          : ""
+      }
+
+      ${
+        phantomState.eyeDetail === "Helle Reflexe"
+          ? `
+            <circle
+              cx="${leftEye - 8}"
+              cy="${eyeY - tilt - 5}"
+              r="5"
+              fill="#fff"
+            />
+
+            <circle
+              cx="${rightEye - 8}"
+              cy="${eyeY + tilt + asymmetry - 5}"
+              r="5"
+              fill="#fff"
+            />
+          `
+          : ""
+      }
     `;
   }
 
-
   function skinMarksSVG() {
-
-    if (
-      phantomState.skinMarks ===
-      "Sommersprossen"
-    ) {
-
+    if (phantomState.skinMarks === "Sommersprossen") {
       const dots = [
-        [250,402],[264,410],[278,405],
-        [236,414],[350,405],[366,410],
-        [380,402],[394,414],
-        [256,424],[374,424]
+        [250, 402],
+        [264, 410],
+        [278, 405],
+        [236, 414],
+        [350, 405],
+        [366, 410],
+        [380, 402],
+        [394, 414],
+        [256, 424],
+        [374, 424]
       ];
 
       return `
@@ -1763,22 +1529,17 @@ document.addEventListener("DOMContentLoaded", () => {
           fill="#995e48"
           opacity=".42"
         >
-          ${
-            dots.map(
-              ([cx,cy]) =>
+          ${dots
+            .map(
+              ([cx, cy]) =>
                 `<circle cx="${cx}" cy="${cy}" r="2" />`
-            ).join("")
-          }
+            )
+            .join("")}
         </g>
       `;
     }
 
-
-    if (
-      phantomState.skinMarks ===
-      "Muttermal"
-    ) {
-
+    if (phantomState.skinMarks === "Muttermal") {
       return `
         <circle
           cx="384"
@@ -1790,12 +1551,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
-
-    if (
-      phantomState.skinMarks ===
-      "Leberflecken"
-    ) {
-
+    if (phantomState.skinMarks === "Leberflecken") {
       return `
         <g
           fill="#805044"
@@ -1812,9 +1568,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return "";
   }
 
-
   function browsSVG() {
-
     const offset =
       (
         phantomFineState.browHeight -
@@ -1846,9 +1600,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     const config =
-      values[
-        phantomState.brows
-      ];
+      values[phantomState.brows];
 
     if (!config) return "";
 
@@ -1873,13 +1625,12 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-
   function noseSVG() {
+    const definition =
+      1 +
+      phantomFineState.noseDefinition / 100;
 
-    switch (
-      phantomState.nose
-    ) {
-
+    switch (phantomState.nose) {
       case "Gebogen":
         return `
           <path
@@ -1890,7 +1641,9 @@ document.addEventListener("DOMContentLoaded", () => {
             "
             fill="none"
             stroke="#895843"
-            stroke-width="2.4"
+            stroke-width="${(
+              1.6 * definition
+            ).toFixed(1)}"
           />
         `;
 
@@ -1905,7 +1658,9 @@ document.addEventListener("DOMContentLoaded", () => {
             "
             fill="none"
             stroke="#895843"
-            stroke-width="2.4"
+            stroke-width="${(
+              1.6 * definition
+            ).toFixed(1)}"
           />
         `;
 
@@ -1919,7 +1674,9 @@ document.addEventListener("DOMContentLoaded", () => {
             "
             fill="none"
             stroke="#895843"
-            stroke-width="2.2"
+            stroke-width="${(
+              1.5 * definition
+            ).toFixed(1)}"
           />
         `;
 
@@ -1932,7 +1689,9 @@ document.addEventListener("DOMContentLoaded", () => {
             "
             fill="none"
             stroke="#895843"
-            stroke-width="2.4"
+            stroke-width="${(
+              1.6 * definition
+            ).toFixed(1)}"
             stroke-linecap="round"
           />
 
@@ -1949,14 +1708,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
   function mouthSVG() {
-
-    if (
-      phantomState.expression ===
-      "Überrascht"
-    ) {
-
+    if (phantomState.expression === "Überrascht") {
       return `
         <ellipse
           cx="300"
@@ -1970,12 +1723,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
-
-    if (
-      phantomState.expression ===
-      "Freundlich"
-    ) {
-
+    if (phantomState.expression === "Freundlich") {
       return `
         <path
           d="
@@ -1992,11 +1740,7 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
-
-    switch (
-      phantomState.mouth
-    ) {
-
+    switch (phantomState.mouth) {
       case "Lächeln":
         return `
           <path
@@ -2071,20 +1815,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
   function beardSVG() {
+    const opacity = (
+      0.35 +
+      phantomFineState.beardDensity / 150
+    ).toFixed(2);
 
-    const opacity =
-      (
-        0.35 +
-        phantomFineState.beardDensity /
-        150
-      ).toFixed(2);
-
-    switch (
-      phantomState.beard
-    ) {
-
+    switch (phantomState.beard) {
       case "Dreitagebart":
         return `
           <path
@@ -2223,6 +1960,18 @@ document.addEventListener("DOMContentLoaded", () => {
             fill="#2a2322"
             opacity="${opacity}"
           />
+
+          <path
+            d="
+              M278 500
+              Q300 510 322 500
+              L316 554
+              Q300 568 284 554
+              Z
+            "
+            fill="#2a2322"
+            opacity="${opacity}"
+          />
         `;
 
       case "Vollbart kurz":
@@ -2245,21 +1994,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
   function ageSVG() {
-
-    if (
-      phantomState.age ===
-      "Jung"
-    ) {
+    if (phantomState.age === "Jung") {
       return "";
     }
 
-    if (
-      phantomState.age ===
-      "Erwachsen"
-    ) {
-
+    if (phantomState.age === "Erwachsen") {
       return `
         <path
           d="M236 416 Q253 406 270 416"
@@ -2279,17 +2019,13 @@ document.addEventListener("DOMContentLoaded", () => {
       `;
     }
 
-    if (
-      phantomState.age ===
-      "Reif"
-    ) {
-
+    if (phantomState.age === "Reif") {
       return `
         <path
           d="M229 414 Q250 397 271 414"
           fill="none"
           stroke="#805545"
-          stroke-width="2.5"
+          stroke-width="3"
           opacity=".42"
         />
 
@@ -2299,6 +2035,14 @@ document.addEventListener("DOMContentLoaded", () => {
           stroke="#805545"
           stroke-width="3"
           opacity=".42"
+        />
+
+        <path
+          d="M258 518 Q300 531 342 518"
+          fill="none"
+          stroke="#805545"
+          stroke-width="3"
+          opacity=".34"
         />
       `;
     }
@@ -2314,23 +2058,23 @@ document.addEventListener("DOMContentLoaded", () => {
         stroke-width="4"
         opacity=".5"
       />
+
+      <path
+        d="M260 530 Q300 544 340 530"
+        fill="none"
+        stroke="#704a3d"
+        stroke-width="4"
+        opacity=".45"
+      />
     `;
   }
 
-
   function scarsSVG() {
-
-    switch (
-      phantomState.scars
-    ) {
-
+    switch (phantomState.scars) {
       case "Stirn":
         return `
           <path
-            d="
-              M332 225
-              L355 268
-            "
+            d="M332 225 L355 268"
             stroke="#a04e58"
             stroke-width="2.5"
           />
@@ -2339,10 +2083,7 @@ document.addEventListener("DOMContentLoaded", () => {
       case "Wange":
         return `
           <path
-            d="
-              M392 392
-              L370 423
-            "
+            d="M392 392 L370 423"
             stroke="#a04e58"
             stroke-width="2.5"
           />
@@ -2351,10 +2092,7 @@ document.addEventListener("DOMContentLoaded", () => {
       case "Kinn":
         return `
           <path
-            d="
-              M298 523
-              L282 511
-            "
+            d="M298 523 L282 511"
             stroke="#a04e58"
             stroke-width="2.5"
           />
@@ -2365,13 +2103,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
   function tattooSVG() {
-
-    switch (
-      phantomState.tattoos
-    ) {
-
+    switch (phantomState.tattoos) {
       case "Stern":
         return `
           <path
@@ -2460,6 +2193,12 @@ document.addEventListener("DOMContentLoaded", () => {
             stroke="#30343b"
             stroke-width="3"
           />
+
+          <path
+            d="M398 428 V448 M388 438 H408"
+            stroke="#30343b"
+            stroke-width="2"
+          />
         `;
 
       case "Nackentattoo":
@@ -2483,13 +2222,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
   function accessoriesSVG() {
-
-    switch (
-      phantomState.accessories
-    ) {
-
+    switch (phantomState.accessories) {
       case "Mütze":
         return `
           <path
@@ -2554,6 +2288,7 @@ document.addEventListener("DOMContentLoaded", () => {
               height="58"
               rx="18"
             />
+
             <rect
               x="310"
               y="312"
@@ -2561,6 +2296,8 @@ document.addEventListener("DOMContentLoaded", () => {
               height="58"
               rx="18"
             />
+
+            <path d="M290 330 Q300 324 310 330" />
           </g>
         `;
 
@@ -2577,12 +2314,15 @@ document.addEventListener("DOMContentLoaded", () => {
               rx="39"
               ry="28"
             />
+
             <ellipse
               cx="354"
               cy="344"
               rx="39"
               ry="28"
             />
+
+            <path d="M285 340 Q300 333 315 340" />
           </g>
         `;
 
@@ -2595,6 +2335,7 @@ document.addEventListener("DOMContentLoaded", () => {
             stroke="#0d1014"
             stroke-width="2.5"
           >
+
             <rect
               x="198"
               y="318"
@@ -2602,6 +2343,7 @@ document.addEventListener("DOMContentLoaded", () => {
               height="50"
               rx="14"
             />
+
             <rect
               x="308"
               y="318"
@@ -2609,6 +2351,7 @@ document.addEventListener("DOMContentLoaded", () => {
               height="50"
               rx="14"
             />
+
             <path
               d="
                 M292 331
@@ -2616,6 +2359,7 @@ document.addEventListener("DOMContentLoaded", () => {
               "
               fill="none"
             />
+
           </g>
         `;
 
@@ -2627,6 +2371,7 @@ document.addEventListener("DOMContentLoaded", () => {
             stroke="#15181b"
             stroke-width="2.5"
           >
+
             <path
               d="
                 M201 322
@@ -2636,6 +2381,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 Z
               "
             />
+
             <path
               d="
                 M309 325
@@ -2645,6 +2391,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 Z
               "
             />
+
+            <path
+              d="M291 331 Q300 324 309 331"
+              fill="none"
+            />
+
           </g>
         `;
 
@@ -2653,11 +2405,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
   function createPhantomSVG() {
-
-    const skin =
-      getSkinColor();
+    const skin = getSkinColor();
 
     const name =
       phantomName?.value.trim() ||
@@ -2671,12 +2420,8 @@ document.addEventListener("DOMContentLoaded", () => {
       phantomDate?.value
         ? new Date(
             `${phantomDate.value}T12:00:00`
-          ).toLocaleDateString(
-            "de-DE"
-          )
-        : new Date().toLocaleDateString(
-            "de-DE"
-          );
+          ).toLocaleDateString("de-DE")
+        : new Date().toLocaleDateString("de-DE");
 
     const backgroundColors = {
       Neutral: "#e3e3df",
@@ -2704,12 +2449,10 @@ document.addEventListener("DOMContentLoaded", () => {
       ] ||
       "#171719";
 
-    const filter =
-      phantomState.renderMode ===
-      "Schwarzweiß"
+    const renderFilter =
+      phantomState.renderMode === "Schwarzweiß"
         ? "grayscale(1)"
-        : phantomState.renderMode ===
-          "Kontrast"
+        : phantomState.renderMode === "Kontrast"
           ? "contrast(1.12)"
           : "none";
 
@@ -2742,7 +2485,7 @@ document.addEventListener("DOMContentLoaded", () => {
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 600 800"
         role="img"
-        style="filter:${filter}"
+        style="filter:${renderFilter}"
       >
 
         <defs>
@@ -2782,7 +2525,7 @@ document.addEventListener("DOMContentLoaded", () => {
           >
             <stop
               offset="0%"
-              stop-color="#ffffff"
+              stop-color="#fff"
             />
 
             <stop
@@ -2799,7 +2542,6 @@ document.addEventListener("DOMContentLoaded", () => {
             x2="1"
             y2="1"
           >
-
             <stop
               offset="0%"
               stop-color="#ffffff"
@@ -2815,7 +2557,6 @@ document.addEventListener("DOMContentLoaded", () => {
               offset="100%"
               stop-color="#08090b"
             />
-
           </linearGradient>
 
         </defs>
@@ -2941,9 +2682,7 @@ document.addEventListener("DOMContentLoaded", () => {
           stroke="#875b48"
           stroke-width="2.5"
         >
-
           ${faceShape()}
-
         </g>
 
 
@@ -2996,38 +2735,24 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-
   function updatePhantomInfo() {
-
     const title =
-      document.getElementById(
-        "phantomPreviewTitle"
-      );
+      document.getElementById("phantomPreviewTitle");
 
     const status =
-      document.getElementById(
-        "phantomFeatureStatus"
-      );
+      document.getElementById("phantomFeatureStatus");
 
     const infoFace =
-      document.getElementById(
-        "infoFace"
-      );
+      document.getElementById("infoFace");
 
     const infoHair =
-      document.getElementById(
-        "infoHair"
-      );
+      document.getElementById("infoHair");
 
     const infoEyes =
-      document.getElementById(
-        "infoEyes"
-      );
+      document.getElementById("infoEyes");
 
     const infoAge =
-      document.getElementById(
-        "infoAge"
-      );
+      document.getElementById("infoAge");
 
     if (title) {
       title.textContent =
@@ -3061,9 +2786,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
   function renderPhantom() {
-
     if (!phantomCanvas) return;
 
     phantomCanvas.innerHTML =
@@ -3072,27 +2795,20 @@ document.addEventListener("DOMContentLoaded", () => {
     updatePhantomInfo();
   }
 
-
   // ========================================
-  // PHANTOM BUTTONS
+  // PHANTOM OPTIONEN
   // ========================================
 
   if (phantomControls) {
-
-    Object.entries(
-      phantomOptions
-    ).forEach(
+    Object.entries(phantomOptions).forEach(
       ([feature, options]) => {
-
         const group =
           phantomControls.querySelector(
             `[data-feature-group="${feature}"]`
           );
 
         const container =
-          group?.querySelector(
-            ".feature-options"
-          );
+          group?.querySelector(".feature-options");
 
         if (!container) return;
 
@@ -3100,73 +2816,57 @@ document.addEventListener("DOMContentLoaded", () => {
           return;
         }
 
-        options.forEach(
-          (value, index) => {
+        options.forEach((value, index) => {
+          const button =
+            document.createElement("button");
 
-            const button =
-              document.createElement(
-                "button"
-              );
+          button.type = "button";
+          button.className = "feature-option";
+          button.textContent = value;
 
-            button.type = "button";
-            button.className =
-              "feature-option";
+          button.classList.toggle(
+            "selected",
+            index === 0
+          );
 
-            button.textContent =
-              value;
+          button.setAttribute(
+            "aria-pressed",
+            String(index === 0)
+          );
 
-            button.classList.toggle(
-              "selected",
-              index === 0
-            );
+          button.addEventListener(
+            "click",
+            () => {
+              phantomState[feature] = value;
 
-            button.setAttribute(
-              "aria-pressed",
-              String(index === 0)
-            );
+              container
+                .querySelectorAll(
+                  ".feature-option"
+                )
+                .forEach(item => {
+                  const selected =
+                    item === button;
 
-            button.addEventListener(
-              "click",
-              () => {
-
-                phantomState[feature] =
-                  value;
-
-                container
-                  .querySelectorAll(
-                    ".feature-option"
-                  )
-                  .forEach(
-                    item => {
-
-                      const selected =
-                        item === button;
-
-                      item.classList.toggle(
-                        "selected",
-                        selected
-                      );
-
-                      item.setAttribute(
-                        "aria-pressed",
-                        String(selected)
-                      );
-                    }
+                  item.classList.toggle(
+                    "selected",
+                    selected
                   );
 
-                renderPhantom();
-              }
-            );
+                  item.setAttribute(
+                    "aria-pressed",
+                    String(selected)
+                  );
+                });
 
-            container.appendChild(
-              button
-            );
-          }
-        );
+              renderPhantom();
+            }
+          );
+
+          container.appendChild(button);
+        });
       }
     );
   }
-
 
   phantomName?.addEventListener(
     "input",
@@ -3183,8 +2883,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderPhantom
   );
 
-
-  [
+  const fineControlIds = [
     "eyeSpacing",
     "eyeHeight",
     "noseDefinition",
@@ -3212,20 +2911,18 @@ document.addEventListener("DOMContentLoaded", () => {
     "eyeContrast",
     "featureSoftness",
     "neckWidth"
-  ].forEach(id => {
+  ];
 
+  fineControlIds.forEach(id => {
     const input =
       document.getElementById(id);
 
     const output =
-      document.getElementById(
-        `${id}Value`
-      );
+      document.getElementById(`${id}Value`);
 
     input?.addEventListener(
       "input",
       () => {
-
         phantomFineState[id] =
           Number(input.value);
 
@@ -3239,30 +2936,27 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   });
 
-
   document
     .getElementById("phantomGrid")
-    ?.addEventListener(
-      "change",
-      event => {
+    ?.addEventListener("change", event => {
+      phantomFineState.phantomGrid =
+        Boolean(event.target.checked);
 
-        phantomFineState.phantomGrid =
-          event.target.checked;
-
-        renderPhantom();
-      }
-    );
-
+      renderPhantom();
+    });
 
   const phantomPresets = {
-
     neutral: {
       face: "Oval",
       hair: "Kurz",
       beard: "Keine",
       age: "Erwachsen",
       expression: "Neutral",
-      skin: "Mittel"
+      skin: "Mittel",
+      eyeSpacing: 50,
+      eyeSize: 50,
+      faceSymmetry: 50,
+      skinTexture: 24
     },
 
     markant: {
@@ -3274,7 +2968,8 @@ document.addEventListener("DOMContentLoaded", () => {
       skin: "Mittel",
       jawWidth: 62,
       cheekbones: 70,
-      browHeight: 44
+      browHeight: 44,
+      hairVolume: 62
     },
 
     reif: {
@@ -3284,620 +2979,667 @@ document.addEventListener("DOMContentLoaded", () => {
       age: "Reif",
       expression: "Ernst",
       skin: "Hell",
+      eyeSize: 45,
+      faceSymmetry: 47,
       skinTexture: 58,
       featureSoftness: 38
     }
   };
 
-
   document
     .querySelectorAll(".phantom-preset")
     .forEach(button => {
+      button.addEventListener("click", () => {
+        const preset =
+          phantomPresets[
+            button.dataset.preset
+          ];
 
-      button.addEventListener(
-        "click",
-        () => {
+        if (!preset) return;
 
-          const preset =
-            phantomPresets[
-              button.dataset.preset
-            ];
-
-          if (!preset) return;
-
-          Object.entries(preset)
-            .forEach(
-              ([key, value]) => {
-
-                if (
-                  Object.prototype
-                    .hasOwnProperty
-                    .call(
-                      phantomOptions,
-                      key
-                    )
-                ) {
-
-                  phantomState[key] =
-                    value;
-
-                  phantomControls
-                    ?.querySelectorAll(
-                      `[data-feature-group="${key}"] .feature-option`
-                    )
-                    .forEach(
-                      option => {
-
-                        const selected =
-                          option.textContent ===
-                          value;
-
-                        option.classList.toggle(
-                          "selected",
-                          selected
-                        );
-
-                        option.setAttribute(
-                          "aria-pressed",
-                          String(selected)
-                        );
-                      }
-                    );
-
-                  return;
-                }
-
-                if (
-                  Object.prototype
-                    .hasOwnProperty
-                    .call(
-                      phantomFineState,
-                      key
-                    )
-                ) {
-
-                  phantomFineState[key] =
-                    value;
-
-                  const input =
-                    document.getElementById(
-                      key
-                    );
-
-                  const output =
-                    document.getElementById(
-                      `${key}Value`
-                    );
-
-                  if (input) {
-                    input.value =
-                      String(value);
-                  }
-
-                  if (output) {
-                    output.textContent =
-                      String(value);
-                  }
-                }
-              }
-            );
-
-          renderPhantom();
-        }
-      );
-    });
-
-
-  document
-    .getElementById(
-      "randomPhantomButton"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
-
-        Object.entries(
-          phantomOptions
-        ).forEach(
-          ([feature, options]) => {
-
-            const randomIndex =
-              Math.floor(
-                Math.random() *
-                options.length
-              );
-
-            phantomState[feature] =
-              options[randomIndex];
-
-            phantomControls
-              ?.querySelectorAll(
-                `[data-feature-group="${feature}"] .feature-option`
+        Object.entries(preset).forEach(
+          ([key, value]) => {
+            if (
+              Object.prototype.hasOwnProperty.call(
+                phantomOptions,
+                key
               )
-              .forEach(
-                (button, index) => {
-
-                  const selected =
-                    index ===
-                    randomIndex;
-
-                  button.classList.toggle(
-                    "selected",
-                    selected
-                  );
-
-                  button.setAttribute(
-                    "aria-pressed",
-                    String(selected)
-                  );
-                }
-              );
-          }
-        );
-
-        renderPhantom();
-      }
-    );
-
-
-  document
-    .getElementById(
-      "savePhantomProfileButton"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
-
-        localStorage.setItem(
-          "schilischoten_phantom_profile",
-          JSON.stringify({
-            name:
-              phantomName?.value || "",
-
-            caseNumber:
-              phantomCaseNumber?.value || "",
-
-            date:
-              phantomDate?.value || "",
-
-            features:
-              phantomState,
-
-            fine:
-              phantomFineState
-          })
-        );
-
-        alert(
-          "Phantombild-Profil gespeichert."
-        );
-      }
-    );
-
-
-  document
-    .getElementById(
-      "loadPhantomProfileButton"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
-
-        try {
-
-          const saved =
-            JSON.parse(
-              localStorage.getItem(
-                "schilischoten_phantom_profile"
-              ) ||
-              "null"
-            );
-
-          if (!saved) {
-            alert(
-              "Kein gespeichertes Profil gefunden."
-            );
-            return;
-          }
-
-          Object.entries(
-            phantomOptions
-          ).forEach(
-            ([feature, options]) => {
-
-              const value =
-                saved.features?.[feature];
-
-              if (!options.includes(value)) {
-                return;
-              }
-
-              phantomState[feature] =
-                value;
+            ) {
+              phantomState[key] = value;
 
               phantomControls
                 ?.querySelectorAll(
-                  `[data-feature-group="${feature}"] .feature-option`
+                  `[data-feature-group="${key}"] .feature-option`
                 )
-                .forEach(
-                  button => {
+                .forEach(option => {
+                  const selected =
+                    option.textContent === value;
 
-                    const selected =
-                      button.textContent ===
-                      value;
+                  option.classList.toggle(
+                    "selected",
+                    selected
+                  );
 
-                    button.classList.toggle(
-                      "selected",
-                      selected
-                    );
+                  option.setAttribute(
+                    "aria-pressed",
+                    String(selected)
+                  );
+                });
 
-                    button.setAttribute(
-                      "aria-pressed",
-                      String(selected)
-                    );
-                  }
-                );
+              return;
             }
-          );
 
-          if (
-            phantomName &&
-            typeof saved.name ===
-            "string"
-          ) {
-            phantomName.value =
-              saved.name;
+            if (
+              Object.prototype.hasOwnProperty.call(
+                phantomFineState,
+                key
+              )
+            ) {
+              phantomFineState[key] =
+                value;
+
+              const input =
+                document.getElementById(key);
+
+              const output =
+                document.getElementById(
+                  `${key}Value`
+                );
+
+              if (input) {
+                input.value =
+                  String(value);
+              }
+
+              if (output) {
+                output.textContent =
+                  String(value);
+              }
+            }
           }
+        );
 
-          if (
-            phantomCaseNumber &&
-            typeof saved.caseNumber ===
-            "string"
-          ) {
-            phantomCaseNumber.value =
-              saved.caseNumber;
-          }
-
-          if (
-            phantomDate &&
-            typeof saved.date ===
-            "string"
-          ) {
-            phantomDate.value =
-              saved.date;
-          }
-
-          renderPhantom();
-
-        } catch (error) {
-
-          console.error(
-            "Phantom-Profil konnte nicht geladen werden:",
-            error
-          );
-        }
-      }
-    );
-
+        renderPhantom();
+      });
+    });
 
   document
-    .getElementById(
-      "resetPhantomButton"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
+    .getElementById("randomPhantomButton")
+    ?.addEventListener("click", () => {
+      Object.entries(phantomOptions).forEach(
+        ([feature, options]) => {
+          const randomIndex =
+            Math.floor(
+              Math.random() *
+              options.length
+            );
 
-        Object.entries(
-          phantomOptions
-        ).forEach(
+          phantomState[feature] =
+            options[randomIndex];
+
+          phantomControls
+            ?.querySelectorAll(
+              `[data-feature-group="${feature}"] .feature-option`
+            )
+            .forEach((button, index) => {
+              const selected =
+                index === randomIndex;
+
+              button.classList.toggle(
+                "selected",
+                selected
+              );
+
+              button.setAttribute(
+                "aria-pressed",
+                String(selected)
+              );
+            });
+        }
+      );
+
+      fineControlIds.forEach(id => {
+        const input =
+          document.getElementById(id);
+
+        const output =
+          document.getElementById(
+            `${id}Value`
+          );
+
+        if (!input) return;
+
+        const value =
+          Math.floor(
+            Number(input.min) +
+            Math.random() *
+            (
+              Number(input.max) -
+              Number(input.min) +
+              1
+            )
+          );
+
+        input.value =
+          String(value);
+
+        phantomFineState[id] =
+          value;
+
+        if (output) {
+          output.textContent =
+            String(value);
+        }
+      });
+
+      renderPhantom();
+    });
+
+  document
+    .getElementById("savePhantomProfileButton")
+    ?.addEventListener("click", () => {
+      localStorage.setItem(
+        "schilischoten_phantom_profile",
+        JSON.stringify({
+          name:
+            phantomName?.value || "",
+          caseNumber:
+            phantomCaseNumber?.value || "",
+          date:
+            phantomDate?.value || "",
+          features:
+            phantomState,
+          fine:
+            phantomFineState
+        })
+      );
+
+      showTemporaryMessage(
+        "Phantombild",
+        "Profil wurde gespeichert."
+      );
+    });
+
+  document
+    .getElementById("loadPhantomProfileButton")
+    ?.addEventListener("click", () => {
+      try {
+        const saved =
+          JSON.parse(
+            localStorage.getItem(
+              "schilischoten_phantom_profile"
+            ) || "null"
+          );
+
+        if (!saved) {
+          showTemporaryMessage(
+            "Phantombild",
+            "Kein gespeichertes Profil gefunden."
+          );
+          return;
+        }
+
+        Object.entries(phantomOptions).forEach(
           ([feature, options]) => {
+            const value =
+              saved.features?.[feature];
+
+            if (!options.includes(value)) {
+              return;
+            }
 
             phantomState[feature] =
-              options[0];
+              value;
 
             phantomControls
               ?.querySelectorAll(
                 `[data-feature-group="${feature}"] .feature-option`
               )
-              .forEach(
-                (button, index) => {
+              .forEach(option => {
+                const selected =
+                  option.textContent === value;
 
-                  const selected =
-                    index === 0;
+                option.classList.toggle(
+                  "selected",
+                  selected
+                );
 
-                  button.classList.toggle(
-                    "selected",
-                    selected
-                  );
-
-                  button.setAttribute(
-                    "aria-pressed",
-                    String(selected)
-                  );
-                }
-              );
+                option.setAttribute(
+                  "aria-pressed",
+                  String(selected)
+                );
+              });
           }
         );
 
-        if (phantomName) {
-          phantomName.value = "";
-        }
-
-        if (phantomCaseNumber) {
-          phantomCaseNumber.value = "";
-        }
-
-        if (phantomDate) {
-          phantomDate.value = "";
-        }
-
         Object.keys(
           phantomFineState
-        ).forEach(key => {
+        ).forEach(id => {
+          if (id === "phantomGrid") {
+            phantomFineState[id] =
+              saved.fine?.[id] === true;
 
-          if (
-            key ===
-            "phantomGrid"
-          ) {
-            phantomFineState[key] =
-              false;
+            const grid =
+              document.getElementById(id);
+
+            if (grid) {
+              grid.checked =
+                phantomFineState[id];
+            }
+
             return;
           }
 
-          if (
-            typeof phantomFineState[key] ===
-            "number"
-          ) {
-            phantomFineState[key] =
-              50;
+          const savedValue =
+            Number(saved.fine?.[id]);
+
+          if (!Number.isFinite(savedValue)) {
+            return;
+          }
+
+          const input =
+            document.getElementById(id);
+
+          if (!input) {
+            phantomFineState[id] =
+              savedValue;
+            return;
+          }
+
+          const min =
+            Number(input.min);
+
+          const max =
+            Number(input.max);
+
+          const value =
+            Math.min(
+              max,
+              Math.max(
+                min,
+                savedValue
+              )
+            );
+
+          phantomFineState[id] =
+            value;
+
+          input.value =
+            String(value);
+
+          const output =
+            document.getElementById(
+              `${id}Value`
+            );
+
+          if (output) {
+            output.textContent =
+              String(value);
           }
         });
 
-        phantomFineState.skinDetail = 24;
-        phantomFineState.skinTexture = 24;
-        phantomFineState.featureSoftness = 24;
-        phantomFineState.beardDensity = 80;
-        phantomFineState.cheekbones = 35;
+        if (
+          phantomName &&
+          typeof saved.name === "string"
+        ) {
+          phantomName.value =
+            saved.name;
+        }
 
-        document
-          .querySelectorAll(
-            "#phantomControls input[type='range']"
-          )
-          .forEach(input => {
+        if (
+          phantomCaseNumber &&
+          typeof saved.caseNumber === "string"
+        ) {
+          phantomCaseNumber.value =
+            saved.caseNumber;
+        }
 
-            input.value =
-              input.id === "skinDetail" ||
-              input.id === "skinTexture" ||
-              input.id === "featureSoftness"
-                ? "24"
-                : input.id === "beardDensity"
-                  ? "80"
-                  : input.id === "cheekbones"
-                    ? "35"
-                    : "50";
-
-            const output =
-              document.getElementById(
-                `${input.id}Value`
-              );
-
-            if (output) {
-              output.textContent =
-                input.value;
-            }
-          });
-
-        const grid =
-          document.getElementById(
-            "phantomGrid"
-          );
-
-        if (grid) {
-          grid.checked = false;
+        if (
+          phantomDate &&
+          typeof saved.date === "string"
+        ) {
+          phantomDate.value =
+            saved.date;
         }
 
         renderPhantom();
-      }
-    );
 
+        showTemporaryMessage(
+          "Phantombild",
+          "Profil wurde geladen."
+        );
+
+      } catch (error) {
+        console.error(
+          "Profil konnte nicht geladen werden:",
+          error
+        );
+
+        showTemporaryMessage(
+          "Fehler",
+          "Das Phantombild-Profil konnte nicht geladen werden."
+        );
+      }
+    });
 
   document
-    .getElementById(
-      "downloadPhantomButton"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
+    .getElementById("resetPhantomButton")
+    ?.addEventListener("click", () => {
+      Object.entries(phantomOptions).forEach(
+        ([feature, options]) => {
+          phantomState[feature] =
+            options[0];
 
-        const svg =
-          createPhantomSVG();
+          phantomControls
+            ?.querySelectorAll(
+              `[data-feature-group="${feature}"] .feature-option`
+            )
+            .forEach((button, index) => {
+              const selected =
+                index === 0;
 
-        const blob =
-          new Blob(
-            [svg],
-            {
-              type:
-                "image/svg+xml;charset=utf-8"
-            }
+              button.classList.toggle(
+                "selected",
+                selected
+              );
+
+              button.setAttribute(
+                "aria-pressed",
+                String(selected)
+              );
+            });
+        }
+      );
+
+      if (phantomName) {
+        phantomName.value = "";
+      }
+
+      if (phantomCaseNumber) {
+        phantomCaseNumber.value = "";
+      }
+
+      if (phantomDate) {
+        phantomDate.value = "";
+      }
+
+      const defaults = {
+        eyeSpacing: 50,
+        eyeHeight: 50,
+        noseDefinition: 50,
+        skinDetail: 24,
+        eyeSize: 50,
+        cheekbones: 35,
+        beardDensity: 80,
+        faceSymmetry: 50,
+        jawWidth: 50,
+        foreheadHeight: 50,
+        mouthWidth: 50,
+        earHeight: 50,
+        eyeTilt: 50,
+        noseWidth: 50,
+        lipFullness: 50,
+        cheekFullness: 50,
+        chinLength: 50,
+        skinTexture: 24,
+        browHeight: 50,
+        noseLength: 50,
+        nostrilWidth: 50,
+        earSize: 50,
+        hairVolume: 50,
+        faceLight: 50,
+        eyeContrast: 50,
+        featureSoftness: 24,
+        neckWidth: 50
+      };
+
+      Object.entries(defaults).forEach(
+        ([id, value]) => {
+          phantomFineState[id] =
+            value;
+
+          const input =
+            document.getElementById(id);
+
+          const output =
+            document.getElementById(
+              `${id}Value`
+            );
+
+          if (input) {
+            input.value =
+              String(value);
+          }
+
+          if (output) {
+            output.textContent =
+              String(value);
+          }
+        }
+      );
+
+      phantomFineState.phantomGrid =
+        false;
+
+      const grid =
+        document.getElementById(
+          "phantomGrid"
+        );
+
+      if (grid) {
+        grid.checked = false;
+      }
+
+      renderPhantom();
+    });
+
+  // ========================================
+  // PHANTOMBILD EXPORT
+  // ========================================
+
+  function getSafeFileName(
+    value,
+    fallback = "datei"
+  ) {
+    const result =
+      String(value || fallback)
+        .replace(
+          /[^a-zA-Z0-9äöüÄÖÜß_-]+/g,
+          "-"
+        )
+        .replace(
+          /^-+|-+$/g,
+          ""
+        );
+
+    return result || fallback;
+  }
+
+  document
+    .getElementById("downloadPhantomButton")
+    ?.addEventListener("click", () => {
+      const svg =
+        createPhantomSVG();
+
+      const blob =
+        new Blob(
+          [svg],
+          {
+            type:
+              "image/svg+xml;charset=utf-8"
+          }
+        );
+
+      const url =
+        URL.createObjectURL(
+          blob
+        );
+
+      const link =
+        document.createElement(
+          "a"
+        );
+
+      link.href =
+        url;
+
+      link.download =
+        `${getSafeFileName(
+          phantomName?.value,
+          "phantombild"
+        )}.svg`;
+
+      document.body.appendChild(
+        link
+      );
+
+      link.click();
+      link.remove();
+
+      setTimeout(
+        () =>
+          URL.revokeObjectURL(
+            url
+          ),
+        1000
+      );
+    });
+
+  document
+    .getElementById("downloadPhantomPngButton")
+    ?.addEventListener("click", () => {
+      const svgBlob =
+        new Blob(
+          [createPhantomSVG()],
+          {
+            type:
+              "image/svg+xml;charset=utf-8"
+          }
+        );
+
+      const imageUrl =
+        URL.createObjectURL(
+          svgBlob
+        );
+
+      const image =
+        new Image();
+
+      image.onload = () => {
+        const canvas =
+          document.createElement(
+            "canvas"
           );
 
-        const url =
-          URL.createObjectURL(blob);
+        canvas.width = 1200;
+        canvas.height = 1600;
+
+        const context =
+          canvas.getContext(
+            "2d"
+          );
+
+        if (!context) {
+          URL.revokeObjectURL(
+            imageUrl
+          );
+          return;
+        }
+
+        context.drawImage(
+          image,
+          0,
+          0,
+          1200,
+          1600
+        );
 
         const link =
           document.createElement(
             "a"
           );
 
-        const filename =
-          (
-            phantomName?.value.trim() ||
-            "phantombild"
-          )
-            .replace(
-              /[^a-z0-9äöüß_-]+/gi,
-              "-"
-            )
-            .toLowerCase();
-
-        link.href = url;
         link.download =
-          `${filename}.svg`;
+          `${getSafeFileName(
+            phantomName?.value,
+            "phantombild"
+          )}.png`;
 
-        document.body.appendChild(
-          link
-        );
+        link.href =
+          canvas.toDataURL(
+            "image/png"
+          );
 
         link.click();
-        link.remove();
 
-        setTimeout(
-          () => {
-            URL.revokeObjectURL(url);
-          },
-          1000
+        URL.revokeObjectURL(
+          imageUrl
         );
-      }
-    );
+      };
 
+      image.onerror = () => {
+        URL.revokeObjectURL(
+          imageUrl
+        );
 
-  document
-    .getElementById(
-      "downloadPhantomPngButton"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
+        showTemporaryMessage(
+          "Fehler",
+          "PNG konnte nicht erstellt werden."
+        );
+      };
 
-        const svgBlob =
-          new Blob(
-            [createPhantomSVG()],
-            {
-              type:
-                "image/svg+xml;charset=utf-8"
-            }
-          );
-
-        const imageUrl =
-          URL.createObjectURL(
-            svgBlob
-          );
-
-        const image =
-          new Image();
-
-        image.onload =
-          () => {
-
-            const canvas =
-              document.createElement(
-                "canvas"
-              );
-
-            canvas.width = 1200;
-            canvas.height = 1600;
-
-            const context =
-              canvas.getContext(
-                "2d"
-              );
-
-            context.drawImage(
-              image,
-              0,
-              0,
-              1200,
-              1600
-            );
-
-            const link =
-              document.createElement(
-                "a"
-              );
-
-            const filename =
-              (
-                phantomName?.value.trim() ||
-                "phantombild"
-              )
-                .replace(
-                  /[^a-z0-9äöüß_-]+/gi,
-                  "-"
-                )
-                .toLowerCase();
-
-            link.download =
-              `${filename}.png`;
-
-            link.href =
-              canvas.toDataURL(
-                "image/png"
-              );
-
-            link.click();
-
-            URL.revokeObjectURL(
-              imageUrl
-            );
-          };
-
-        image.src =
-          imageUrl;
-      }
-    );
-
+      image.src =
+        imageUrl;
+    });
 
   document
-    .getElementById(
-      "printPhantomButton"
-    )
-    ?.addEventListener(
-      "click",
-      () => {
+    .getElementById("printPhantomButton")
+    ?.addEventListener("click", () => {
+      const printWindow =
+        window.open(
+          "",
+          "_blank",
+          "width=760,height=980"
+        );
 
-        const printWindow =
-          window.open(
-            "",
-            "_blank",
-            "width=760,height=980"
-          );
-
-        if (!printWindow) return;
-
-        printWindow.document.write(`
-          <!doctype html>
-          <html>
-            <head>
-              <title>Phantombild</title>
-
-              <style>
-                body {
-                  margin: 0;
-                  background: white;
-                  text-align: center;
-                }
-
-                svg {
-                  width: min(100%, 760px);
-                  height: auto;
-                }
-              </style>
-
-            </head>
-
-            <body>
-              ${createPhantomSVG()}
-            </body>
-          </html>
-        `);
-
-        printWindow.document.close();
-        printWindow.focus();
-        printWindow.print();
+      if (!printWindow) {
+        showTemporaryMessage(
+          "Drucken",
+          "Das Druckfenster wurde vom Browser blockiert."
+        );
+        return;
       }
-    );
 
+      printWindow.document.write(`
+        <!doctype html>
+        <html lang="de">
+          <head>
+            <title>Phantombild</title>
+
+            <style>
+              body {
+                margin: 0;
+                background: #fff;
+                text-align: center;
+              }
+
+              svg {
+                width: min(100%, 760px);
+                height: auto;
+              }
+            </style>
+          </head>
+
+          <body>
+            ${createPhantomSVG()}
+          </body>
+        </html>
+      `);
+
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    });
 
   // ========================================
   // BILDVERGLEICH
@@ -3926,12 +3668,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let selectedFileA = null;
   let selectedFileB = null;
 
-
-  function showImagePreview(
-    file,
-    container
-  ) {
-
+  function showImagePreview(file, container) {
     if (
       !file ||
       !container ||
@@ -3954,59 +3691,54 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-
   function loadImage(file) {
-
     return new Promise(
       (resolve, reject) => {
-
         const image =
           new Image();
 
-        image.onload =
-          () => resolve(image);
-
-        image.onerror =
-          () =>
-            reject(
-              new Error(
-                "Bild konnte nicht geladen werden."
-              )
-            );
-
-        image.src =
+        const url =
           URL.createObjectURL(file);
+
+        image.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(image);
+        };
+
+        image.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(
+            new Error(
+              "Bild konnte nicht geladen werden."
+            )
+          );
+        };
+
+        image.src = url;
       }
     );
   }
-
 
   async function compareImages(
     imageFileA,
     imageFileB
   ) {
-
     const [
       imageA,
       imageB
-    ] =
-      await Promise.all([
-        loadImage(imageFileA),
-        loadImage(imageFileB)
-      ]);
+    ] = await Promise.all([
+      loadImage(imageFileA),
+      loadImage(imageFileB)
+    ]);
 
     const size = 256;
     const tolerance = 8;
 
     const canvasA =
-      document.createElement(
-        "canvas"
-      );
+      document.createElement("canvas");
 
     const canvasB =
-      document.createElement(
-        "canvas"
-      );
+      document.createElement("canvas");
 
     canvasA.width = size;
     canvasA.height = size;
@@ -4029,6 +3761,12 @@ document.addEventListener("DOMContentLoaded", () => {
           willReadFrequently: true
         }
       );
+
+    if (!contextA || !contextB) {
+      throw new Error(
+        "Canvas konnte nicht erstellt werden."
+      );
+    }
 
     contextA.drawImage(
       imageA,
@@ -4069,7 +3807,6 @@ document.addEventListener("DOMContentLoaded", () => {
       index < pixelsA.length;
       index += 4
     ) {
-
       const samePixel =
         Math.abs(
           pixelsA[index] -
@@ -4102,6 +3839,9 @@ document.addEventListener("DOMContentLoaded", () => {
     return {
       matchingPixels,
       totalPixels,
+      differentPixels:
+        totalPixels -
+        matchingPixels,
       percentage:
         (
           matchingPixels /
@@ -4111,31 +3851,23 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-
   document
-    .getElementById(
-      "uploadButtonA"
-    )
+    .getElementById("uploadButtonA")
     ?.addEventListener(
       "click",
       () => fileA?.click()
     );
 
-
   document
-    .getElementById(
-      "uploadButtonB"
-    )
+    .getElementById("uploadButtonB")
     ?.addEventListener(
       "click",
       () => fileB?.click()
     );
 
-
   fileA?.addEventListener(
     "change",
     event => {
-
       selectedFileA =
         event.target.files?.[0] ||
         null;
@@ -4147,11 +3879,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   );
 
-
   fileB?.addEventListener(
     "change",
     event => {
-
       selectedFileB =
         event.target.files?.[0] ||
         null;
@@ -4163,15 +3893,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   );
 
-
   document
-    .getElementById(
-      "startCompareButton"
-    )
+    .getElementById("startCompareButton")
     ?.addEventListener(
       "click",
       async () => {
-
         const resultBox =
           document.getElementById(
             "compareResult"
@@ -4187,7 +3913,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "comparisonPercent"
           );
 
-        const matchingPixels =
+        const matching =
           document.getElementById(
             "comparisonMatchingPixels"
           );
@@ -4205,7 +3931,6 @@ document.addEventListener("DOMContentLoaded", () => {
           !selectedFileA ||
           !selectedFileB
         ) {
-
           if (title) {
             title.textContent =
               "Bilder fehlen";
@@ -4216,8 +3941,8 @@ document.addEventListener("DOMContentLoaded", () => {
               "-";
           }
 
-          if (matchingPixels) {
-            matchingPixels.textContent =
+          if (matching) {
+            matching.textContent =
               "";
           }
 
@@ -4230,7 +3955,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-
           const result =
             await compareImages(
               selectedFileA,
@@ -4249,18 +3973,25 @@ document.addEventListener("DOMContentLoaded", () => {
               `${result.percentage.toFixed(2)}%`;
           }
 
-          if (matchingPixels) {
-            matchingPixels.textContent =
-              `${result.matchingPixels.toLocaleString("de-DE")} von ${result.totalPixels.toLocaleString("de-DE")} Pixeln gleich`;
+          if (matching) {
+            matching.textContent =
+              `${result.matchingPixels.toLocaleString(
+                "de-DE"
+              )} von ${result.totalPixels.toLocaleString(
+                "de-DE"
+              )} Pixeln gleich · ${
+                result.differentPixels.toLocaleString(
+                  "de-DE"
+                )
+              } unterschiedlich`;
           }
 
           if (description) {
             description.textContent =
-              "Die Quote basiert auf einem direkten Pixelvergleich mit einheitlicher Vergleichsgröße.";
+              "Direkter Pixelvergleich bei einheitlicher Vergleichsgröße. Das Ergebnis ist kein Identitätsnachweis.";
           }
 
         } catch (error) {
-
           console.error(
             "Bildvergleich fehlgeschlagen:",
             error
@@ -4276,8 +4007,8 @@ document.addEventListener("DOMContentLoaded", () => {
               "-";
           }
 
-          if (matchingPixels) {
-            matchingPixels.textContent =
+          if (matching) {
+            matching.textContent =
               "";
           }
 
@@ -4289,12 +4020,27 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
-
   // ========================================
   // 🔥 FIREBASE CHAT
   // ========================================
 
-  let activeAccount = "Leon";
+  const firebaseAuth =
+    window.firebaseAuth || null;
+
+  const firebaseDb =
+    window.firebaseDb || null;
+
+  const firebaseStorage =
+    window.firebaseStorage || null;
+
+  let currentFirebaseUser = null;
+  let cloudMessages = [];
+  let firebaseChatListenerActive = false;
+
+  let activeAccount =
+    localStorage.getItem(
+      "schilischoten_active_account"
+    ) || "Leon";
 
   const chatInput =
     document.getElementById(
@@ -4326,119 +4072,108 @@ document.addEventListener("DOMContentLoaded", () => {
       "attachChatImage"
     );
 
-  const firebaseAuth =
-    window.firebaseAuth ||
-    null;
+  let selectedChatImage = null;
 
-  const firebaseDb =
-    window.firebaseDb ||
-    null;
-
-  const firebaseStorage =
-    window.firebaseStorage ||
-    null;
-
-  let currentFirebaseUser =
-    null;
-
-  let cloudMessages = [];
-
+  // ----------------------------------------
+  // CHAT RENDER
+  // ----------------------------------------
 
   function renderCloudChat() {
-
-    if (!chatMessages) {
-      return;
-    }
+    if (!chatMessages) return;
 
     if (!cloudMessages.length) {
-
       chatMessages.innerHTML = `
         <div class="empty-state">
           Noch keine Nachrichten.
         </div>
       `;
-
       return;
     }
 
     chatMessages.innerHTML =
       cloudMessages
-        .map(
-          message => {
+        .map(message => {
+          const sender =
+            escapeHTML(
+              message.sender ||
+              "Unbekannt"
+            );
 
-            const sender =
-              escapeHTML(
-                message.sender ||
-                "Unbekannt"
-              );
+          const text =
+            escapeHTML(
+              message.text ||
+              ""
+            );
 
-            const text =
-              escapeHTML(
-                message.text ||
-                ""
-              );
+          const time =
+            escapeHTML(
+              message.time ||
+              formatTime(
+                message.createdAt
+              )
+            );
 
-            const time =
-              escapeHTML(
-                message.time ||
-                ""
-              );
+          const image =
+            message.imageUrl
+              ? `
+                <img
+                  class="chat-message-image"
+                  src="${escapeHTML(
+                    message.imageUrl
+                  )}"
+                  alt="Geteiltes Bild"
+                  loading="lazy"
+                >
+              `
+              : "";
 
-            const image =
-              message.imageUrl
-                ? `
-                  <img
-                    class="chat-message-image"
-                    src="${escapeHTML(
-                      message.imageUrl
-                    )}"
-                    alt="Geteiltes Bild"
-                    loading="lazy"
-                  >
-                `
-                : "";
+          return `
+            <div
+              class="chat-message ${
+                message.uid &&
+                currentFirebaseUser &&
+                message.uid ===
+                  currentFirebaseUser.uid
+                  ? "own-message"
+                  : ""
+              }"
+            >
 
-            return `
-              <div class="chat-message">
+              <strong>
+                ${sender}
+              </strong>
 
-                <strong>
-                  ${sender}
-                </strong>
+              ${
+                text
+                  ? `
+                    <span>
+                      ${text}
+                    </span>
+                  `
+                  : ""
+              }
 
-                ${
-                  text
-                    ? `
-                      <span>
-                        ${text}
-                      </span>
-                    `
-                    : ""
-                }
+              ${image}
 
-                ${image}
+              <small>
+                ${time}
+              </small>
 
-                <small>
-                  ${time}
-                </small>
-
-              </div>
-            `;
-          }
-        )
+            </div>
+          `;
+        })
         .join("");
 
     chatMessages.scrollTop =
       chatMessages.scrollHeight;
   }
 
+  // ----------------------------------------
+  // FIREBASE VERBINDUNG
+  // ----------------------------------------
 
   async function startFirebaseChat() {
-
-    if (
-      !firebaseAuth ||
-      !firebaseDb
-    ) {
-
+    if (!firebaseAuth || !firebaseDb) {
       console.error(
         "Firebase Auth oder Realtime Database fehlt."
       );
@@ -4446,7 +4181,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (chatMessages) {
         chatMessages.innerHTML = `
           <div class="empty-state">
-            Firebase ist nicht verbunden.
+            Firebase ist nicht richtig geladen.
           </div>
         `;
       }
@@ -4455,13 +4190,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-
-      if (
-        !firebaseAuth.currentUser
-      ) {
-
-        await firebaseAuth
-          .signInAnonymously();
+      if (!firebaseAuth.currentUser) {
+        await firebaseAuth.signInAnonymously();
       }
 
       currentFirebaseUser =
@@ -4469,41 +4199,71 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (!currentFirebaseUser) {
         throw new Error(
-          "Firebase-Benutzer konnte nicht erstellt werden."
+          "Kein Firebase-Benutzer vorhanden."
         );
       }
 
       console.log(
-        "🌶️ Firebase Chat verbunden:",
+        "🌶️ Firebase verbunden:",
         currentFirebaseUser.uid
       );
 
       listenForCloudMessages();
 
     } catch (error) {
-
       console.error(
-        "Firebase Anmeldung fehlgeschlagen:",
+        "Firebase-Anmeldung fehlgeschlagen:",
         error
       );
 
-      if (chatMessages) {
+      let errorText =
+        "Firebase-Anmeldung fehlgeschlagen.";
 
+      if (
+        error?.code ===
+        "auth/operation-not-allowed"
+      ) {
+        errorText =
+          "Anonyme Anmeldung ist in Firebase noch nicht aktiviert.";
+      }
+
+      if (
+        error?.code ===
+        "auth/network-request-failed"
+      ) {
+        errorText =
+          "Keine Verbindung zu Firebase.";
+      }
+
+      if (chatMessages) {
         chatMessages.innerHTML = `
           <div class="empty-state">
-            Firebase-Anmeldung fehlgeschlagen.
+            ${escapeHTML(errorText)}
           </div>
         `;
       }
+
+      showTemporaryMessage(
+        "Firebase",
+        errorText
+      );
     }
   }
 
+  // ----------------------------------------
+  // NACHRICHTEN ABHÖREN
+  // ----------------------------------------
 
   function listenForCloudMessages() {
-
-    if (!firebaseDb) {
+    if (
+      !firebaseDb ||
+      firebaseChatListenerActive
+    ) {
       return;
     }
+
+    firebaseChatListenerActive =
+      true;
 
     firebaseDb
       .ref("chatMessages")
@@ -4511,15 +4271,11 @@ document.addEventListener("DOMContentLoaded", () => {
       .on(
         "value",
         snapshot => {
-
           const data =
-            snapshot.val() ||
-            {};
+            snapshot.val() || {};
 
           cloudMessages =
-            Object.entries(
-              data
-            )
+            Object.entries(data)
               .map(
                 ([key, value]) => ({
                   id: key,
@@ -4536,7 +4292,6 @@ document.addEventListener("DOMContentLoaded", () => {
                   )
               );
 
-          // Statistik synchron halten
           messages =
             cloudMessages.map(
               message => ({
@@ -4557,24 +4312,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 time:
                   message.time ||
-                  ""
+                  formatTime(
+                    message.createdAt
+                  )
               })
             );
 
           localStorage.setItem(
             STORAGE.messages,
-            JSON.stringify(
-              messages
-            )
+            JSON.stringify(messages)
           );
 
           renderCloudChat();
           renderStats();
+          updateNotificationBadge();
         },
         error => {
-
           console.error(
-            "Firebase Chat Fehler:",
+            "Firebase Datenbankfehler:",
             error
           );
 
@@ -4585,15 +4340,21 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             `;
           }
+
+          showTemporaryMessage(
+            "Firebase-Fehler",
+            error?.message ||
+              "Die Nachrichten konnten nicht geladen werden."
+          );
         }
       );
   }
 
+  // ----------------------------------------
+  // BILD IN FIREBASE STORAGE HOCHLADEN
+  // ----------------------------------------
 
-  async function uploadChatImage(
-    file
-  ) {
-
+  async function uploadChatImage(file) {
     if (!firebaseStorage) {
       throw new Error(
         "Firebase Storage ist nicht verfügbar."
@@ -4607,12 +4368,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (
-      !file.type.startsWith(
-        "image/"
-      )
+      !file ||
+      !file.type.startsWith("image/")
     ) {
       throw new Error(
-        "Nur Bilder sind erlaubt."
+        "Bitte ein Bild auswählen."
       );
     }
 
@@ -4648,32 +4408,34 @@ document.addEventListener("DOMContentLoaded", () => {
     return await storageRef.getDownloadURL();
   }
 
+  // ----------------------------------------
+  // NACHRICHT SENDEN
+  // ----------------------------------------
 
   async function sendChatMessage() {
+    if (!firebaseDb) {
+      showTemporaryMessage(
+        "Firebase",
+        "Die Realtime Database ist nicht geladen."
+      );
+      return;
+    }
 
-    if (
-      !chatInput ||
-      !firebaseDb
-    ) {
+    if (!currentFirebaseUser) {
+      showTemporaryMessage(
+        "Firebase",
+        "Der Cloud-Chat ist noch nicht verbunden."
+      );
       return;
     }
 
     const text =
-      chatInput.value.trim();
+      chatInput?.value.trim() || "";
 
     if (
       !text &&
       !selectedChatImage
     ) {
-      return;
-    }
-
-    if (!currentFirebaseUser) {
-
-      alert(
-        "Der Cloud-Chat ist noch nicht verbunden."
-      );
-
       return;
     }
 
@@ -4686,84 +4448,96 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     try {
-
       let imageUrl = "";
 
       if (selectedChatImage) {
-
         imageUrl =
           await uploadChatImage(
             selectedChatImage
           );
       }
 
+      const messageData = {
+        sender:
+          activeAccount,
+
+        text:
+          text,
+
+        imageUrl:
+          imageUrl,
+
+        uid:
+          currentFirebaseUser.uid,
+
+        createdAt:
+          firebase.database.ServerValue.TIMESTAMP,
+
+        time:
+          new Date().toLocaleTimeString(
+            "de-DE",
+            {
+              hour: "2-digit",
+              minute: "2-digit"
+            }
+          )
+      };
+
       await firebaseDb
         .ref("chatMessages")
-        .push({
+        .push(messageData);
 
-          sender:
-            activeAccount,
+      if (chatInput) {
+        chatInput.value = "";
+      }
 
-          text:
-            text,
-
-          imageUrl:
-            imageUrl || "",
-
-          uid:
-            currentFirebaseUser.uid,
-
-          createdAt:
-            window.firebase.database
-              .ServerValue
-              .TIMESTAMP,
-
-          time:
-            new Date()
-              .toLocaleTimeString(
-                "de-DE",
-                {
-                  hour: "2-digit",
-                  minute: "2-digit"
-                }
-              )
-        });
-
-      chatInput.value = "";
-
-      selectedChatImage =
-        null;
+      selectedChatImage = null;
 
       if (chatImage) {
         chatImage.value = "";
       }
 
       if (chatImagePreview) {
-
-        chatImagePreview
-          .classList
-          .add("hidden");
-
-        chatImagePreview
-          .innerHTML = "";
+        chatImagePreview.innerHTML = "";
+        chatImagePreview.classList.add(
+          "hidden"
+        );
       }
 
     } catch (error) {
-
       console.error(
         "Nachricht konnte nicht gesendet werden:",
         error
       );
 
-      alert(
+      let errorText =
         error?.message ||
-        "Die Nachricht konnte nicht gesendet werden."
+        "Die Nachricht konnte nicht gesendet werden.";
+
+      if (
+        error?.code ===
+        "PERMISSION_DENIED"
+      ) {
+        errorText =
+          "Firebase verweigert das Schreiben. Bitte die Realtime-Database-Regeln prüfen.";
+      }
+
+      if (
+        error?.message?.toLowerCase().includes(
+          "permission"
+        )
+      ) {
+        errorText =
+          "Firebase verweigert das Schreiben. Bitte die Realtime-Database-Regeln prüfen.";
+      }
+
+      showTemporaryMessage(
+        "Nachricht nicht gesendet",
+        errorText
       );
 
     } finally {
-
       if (sendMessageButton) {
-
         sendMessageButton.disabled =
           false;
 
@@ -4773,10 +4547,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-
-  let selectedChatImage =
-    null;
-
+  // ----------------------------------------
+  // CHAT BILD
+  // ----------------------------------------
 
   attachChatImage?.addEventListener(
     "click",
@@ -4785,11 +4558,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   );
 
-
   chatImage?.addEventListener(
     "change",
     event => {
-
       const file =
         event.target.files?.[0];
 
@@ -4802,13 +4573,12 @@ document.addEventListener("DOMContentLoaded", () => {
           "image/"
         )
       ) {
-
-        alert(
+        showTemporaryMessage(
+          "Chat",
           "Bitte ein Bild auswählen."
         );
 
         event.target.value = "";
-
         return;
       }
 
@@ -4816,13 +4586,12 @@ document.addEventListener("DOMContentLoaded", () => {
         file.size >
         4 * 1024 * 1024
       ) {
-
-        alert(
+        showTemporaryMessage(
+          "Chat",
           "Das Bild darf höchstens 4 MB groß sein."
         );
 
         event.target.value = "";
-
         return;
       }
 
@@ -4830,7 +4599,6 @@ document.addEventListener("DOMContentLoaded", () => {
         file;
 
       if (chatImagePreview) {
-
         const previewUrl =
           URL.createObjectURL(
             file
@@ -4851,9 +4619,9 @@ document.addEventListener("DOMContentLoaded", () => {
           </button>
         `;
 
-        chatImagePreview
-          .classList
-          .remove("hidden");
+        chatImagePreview.classList.remove(
+          "hidden"
+        );
 
         document
           .getElementById(
@@ -4862,7 +4630,6 @@ document.addEventListener("DOMContentLoaded", () => {
           ?.addEventListener(
             "click",
             () => {
-
               selectedChatImage =
                 null;
 
@@ -4871,13 +4638,12 @@ document.addEventListener("DOMContentLoaded", () => {
                   "";
               }
 
-              chatImagePreview
-                .classList
-                .add("hidden");
-
-              chatImagePreview
-                .innerHTML =
+              chatImagePreview.innerHTML =
                 "";
+
+              chatImagePreview.classList.add(
+                "hidden"
+              );
 
               URL.revokeObjectURL(
                 previewUrl
@@ -4888,63 +4654,50 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   );
 
-
   sendMessageButton?.addEventListener(
     "click",
     sendChatMessage
   );
 
-
   chatInput?.addEventListener(
     "keydown",
     event => {
-
       if (
         event.key === "Enter" &&
         !event.shiftKey
       ) {
-
         event.preventDefault();
-
         sendChatMessage();
       }
     }
   );
 
-
   // ========================================
-  // ECHTE AGENTEN
+  // TEAM / ACCOUNTS
   // ========================================
 
   const team = [
-
     {
       name: "Leon",
       role: "Chef-Ermittler"
     },
-
     {
       name: "Leo",
       role: "Agent"
     },
-
     {
       name: "Leonie",
       role: "Agent"
     },
-
     {
       name: "Melina",
       role: "Agent"
     },
-
     {
       name: "Nils",
       role: "Agent"
     }
-
   ];
-
 
   const accountToggle =
     document.getElementById(
@@ -4956,19 +4709,24 @@ document.addEventListener("DOMContentLoaded", () => {
       "accountMenu"
     );
 
-
   function updateAccountUI() {
-
     const account =
       team.find(
-        item =>
-          item.name ===
+        person =>
+          person.name ===
           activeAccount
       ) ||
       team[0];
 
-    const fields = {
+    activeAccount =
+      account.name;
 
+    localStorage.setItem(
+      "schilischoten_active_account",
+      activeAccount
+    );
+
+    const fields = {
       accountToggleName:
         account.name,
 
@@ -4988,53 +4746,47 @@ document.addEventListener("DOMContentLoaded", () => {
         account.name.charAt(0)
     };
 
+    Object.entries(fields).forEach(
+      ([id, value]) => {
+        const element =
+          document.getElementById(id);
 
-    Object.entries(fields)
-      .forEach(
-        ([id, value]) => {
-
-          const element =
-            document.getElementById(
-              id
-            );
-
-          if (element) {
-            element.textContent =
-              value;
-          }
+        if (element) {
+          element.textContent =
+            value;
         }
-      );
-
+      }
+    );
 
     document
       .querySelectorAll(
         ".account-option"
       )
-      .forEach(
-        button => {
+      .forEach(button => {
+        const selected =
+          button.dataset.account ===
+          account.name;
 
-          button.classList.toggle(
-            "active",
-            button.dataset.account ===
-            account.name
-          );
-        }
-      );
+        button.classList.toggle(
+          "active",
+          selected
+        );
+      });
   }
-
 
   accountToggle?.addEventListener(
     "click",
     () => {
+      if (!accountMenu) return;
 
-      accountMenu
-        ?.classList
-        .toggle("hidden");
+      accountMenu.classList.toggle(
+        "hidden"
+      );
 
       accountToggle.setAttribute(
         "aria-expanded",
         String(
-          !accountMenu?.classList.contains(
+          !accountMenu.classList.contains(
             "hidden"
           )
         )
@@ -5042,39 +4794,31 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   );
 
-
   document
     .querySelectorAll(
       ".account-option"
     )
-    .forEach(
-      option => {
+    .forEach(option => {
+      option.addEventListener(
+        "click",
+        () => {
+          activeAccount =
+            option.dataset.account ||
+            "Leon";
 
-        option.addEventListener(
-          "click",
-          () => {
+          updateAccountUI();
 
-            activeAccount =
-              option.dataset.account ||
-              "Leon";
+          accountMenu?.classList.add(
+            "hidden"
+          );
 
-            updateAccountUI();
-
-            accountMenu
-              ?.classList
-              .add("hidden");
-
-            accountToggle?.setAttribute(
-              "aria-expanded",
-              "false"
-            );
-
-            renderCloudChat();
-          }
-        );
-      }
-    );
-
+          accountToggle?.setAttribute(
+            "aria-expanded",
+            "false"
+          );
+        }
+      );
+    });
 
   // ========================================
   // SUCHE
@@ -5090,9 +4834,7 @@ document.addEventListener("DOMContentLoaded", () => {
       "searchResults"
     );
 
-
   const searchablePages = [
-
     ["Dashboard", "dashboard"],
     ["Fälle", "cases"],
     ["Vergleichen", "compare"],
@@ -5109,9 +4851,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ]
   ];
 
-
   const localCrimeTerms = [
-
     "einbruch",
     "einbrüche",
     "diebstahl",
@@ -5124,14 +4864,9 @@ document.addEventListener("DOMContentLoaded", () => {
     "brand",
     "polizei",
     "fahndung"
-
   ];
 
-
-  function openLocalWebSearch(
-    query
-  ) {
-
+  function openLocalWebSearch(query) {
     const cleanQuery =
       query.trim();
 
@@ -5140,25 +4875,21 @@ document.addEventListener("DOMContentLoaded", () => {
     const webQuery =
       `Rems-Murr-Kreis ${cleanQuery} Polizei`;
 
-    const url =
+    window.open(
       `https://www.google.com/search?q=${encodeURIComponent(
         webQuery
-      )}`;
-
-    window.open(
-      url,
+      )}`,
       "_blank",
       "noopener,noreferrer"
     );
   }
 
-
   const researchSources = [
-
     {
       type: "police",
       icon: "🛡️",
-      title: "Polizeipräsidium Aalen",
+      title:
+        "Polizeipräsidium Aalen",
       text:
         "Aktuelle Pressemitteilungen und Fahndungen für den Raum Rems-Murr.",
       url:
@@ -5168,7 +4899,8 @@ document.addEventListener("DOMContentLoaded", () => {
     {
       type: "police",
       icon: "🚔",
-      title: "Polizei Baden-Württemberg",
+      title:
+        "Polizei Baden-Württemberg",
       text:
         "Offizielle Informationen und regionale Meldungen.",
       url:
@@ -5178,7 +4910,8 @@ document.addEventListener("DOMContentLoaded", () => {
     {
       type: "news",
       icon: "📰",
-      title: "Lokale Nachrichten suchen",
+      title:
+        "Lokale Nachrichten suchen",
       text:
         "Regionale Berichte passend zum Suchbegriff.",
       url:
@@ -5188,30 +4921,26 @@ document.addEventListener("DOMContentLoaded", () => {
     {
       type: "alerts",
       icon: "⚠️",
-      title: "Fahndung und Warnungen",
+      title:
+        "Fahndung und Warnungen",
       text:
         "Offizielle Fahndungs- und Warnmeldungen recherchieren.",
       url:
         "https://www.polizei-bw.de/fahndung/"
     }
-
   ];
 
-
   let researchHistory =
-    JSON.parse(
+    safeParseArray(
       localStorage.getItem(
         "schilischoten_research_history"
-      ) || "[]"
+      )
     );
-
 
   let researchPosition =
     researchHistory.length - 1;
 
-
   function renderResearchHistory() {
-
     const list =
       document.getElementById(
         "researchHistoryList"
@@ -5221,7 +4950,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     list.innerHTML =
       researchHistory.length
-
         ? researchHistory
             .slice()
             .reverse()
@@ -5238,7 +4966,6 @@ document.addEventListener("DOMContentLoaded", () => {
               `
             )
             .join("")
-
         : `
           <span class="research-empty">
             Noch keine Suchen
@@ -5246,12 +4973,10 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
   }
 
-
   function renderResearch(
     query = "",
     filter = "all"
   ) {
-
     const address =
       document.getElementById(
         "researchAddress"
@@ -5267,10 +4992,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "researchResultsGrid"
       );
 
-    if (
-      !status ||
-      !grid
-    ) {
+    if (!status || !grid) {
       return;
     }
 
@@ -5294,10 +5016,8 @@ document.addEventListener("DOMContentLoaded", () => {
         ? `${sources.length} Recherchequellen für „${cleanQuery}“ · Rems-Murr-Kreis`
         : "Bereit für eine lokale Recherche.";
 
-
     grid.innerHTML =
       cleanQuery
-
         ? sources
             .map(
               source => `
@@ -5311,11 +5031,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     <span>
                       ${
-                        source.type ===
-                        "police"
+                        source.type === "police"
                           ? "OFFIZIELL"
-                          : source.type ===
-                            "alerts"
+                          : source.type === "alerts"
                             ? "FAHNDUNG"
                             : "REGIONAL"
                       }
@@ -5349,44 +5067,38 @@ document.addEventListener("DOMContentLoaded", () => {
               `
             )
             .join("")
-
         : `
           <div class="research-empty-state">
-
             <strong>
               Lokale Recherche starten
             </strong>
 
             <p>
-              Suche zum Beispiel nach „Einbruch“,
-              „Diebstahl“ oder einem Ort im
-              Rems-Murr-Kreis.
+              Suche zum Beispiel nach
+              „Einbruch“, „Diebstahl“
+              oder einem Ort im Rems-Murr-Kreis.
             </p>
-
           </div>
         `;
 
     renderResearchHistory();
   }
 
-
   function runResearch(query) {
-
     const cleanQuery =
       query.trim();
 
-    if (!cleanQuery) return;
+    if (!cleanQuery) {
+      return;
+    }
 
     researchHistory = [
-
       cleanQuery,
-
       ...researchHistory.filter(
         item =>
           item.toLowerCase() !==
           cleanQuery.toLowerCase()
       )
-
     ].slice(0, 8);
 
     researchPosition =
@@ -5406,7 +5118,6 @@ document.addEventListener("DOMContentLoaded", () => {
     );
   }
 
-
   document
     .getElementById(
       "researchSearchButton"
@@ -5414,7 +5125,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener(
       "click",
       () => {
-
         runResearch(
           document.getElementById(
             "researchAddress"
@@ -5423,7 +5133,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
-
   document
     .getElementById(
       "researchAddress"
@@ -5431,12 +5140,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener(
       "keydown",
       event => {
-
-        if (
-          event.key ===
-          "Enter"
-        ) {
-
+        if (event.key === "Enter") {
           runResearch(
             event.target.value
           );
@@ -5444,23 +5148,19 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
-
   document
     .querySelectorAll(
       ".research-filter"
     )
     .forEach(button => {
-
       button.addEventListener(
         "click",
         () => {
-
           document
             .querySelectorAll(
               ".research-filter"
             )
             .forEach(item => {
-
               item.classList.toggle(
                 "active",
                 item === button
@@ -5471,14 +5171,12 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById(
               "researchAddress"
             )?.value || "",
-
             button.dataset
               .researchFilter
           );
         }
       );
     });
-
 
   document
     .getElementById(
@@ -5487,7 +5185,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener(
       "click",
       event => {
-
         const button =
           event.target.closest(
             "[data-research-url]"
@@ -5503,7 +5200,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
-
   document
     .getElementById(
       "researchHistoryList"
@@ -5511,7 +5207,6 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener(
       "click",
       event => {
-
         const button =
           event.target.closest(
             "[data-research-history]"
@@ -5526,7 +5221,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
-
   document
     .getElementById(
       "researchBackButton"
@@ -5534,12 +5228,10 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener(
       "click",
       () => {
-
         if (
           researchPosition >
           0
         ) {
-
           researchPosition--;
 
           renderResearch(
@@ -5551,7 +5243,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
-
   document
     .getElementById(
       "researchForwardButton"
@@ -5559,12 +5250,10 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener(
       "click",
       () => {
-
         if (
           researchPosition <
           researchHistory.length - 1
         ) {
-
           researchPosition++;
 
           renderResearch(
@@ -5576,210 +5265,175 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
+  globalSearch?.addEventListener(
+    "input",
+    () => {
+      if (!searchResults) return;
 
-  if (globalSearch) {
+      const query =
+        globalSearch.value
+          .trim()
+          .toLowerCase();
 
-    globalSearch.addEventListener(
-      "input",
-      () => {
+      if (!query) {
+        searchResults.classList.add(
+          "hidden"
+        );
 
-        if (!searchResults) return;
+        searchResults.innerHTML =
+          "";
 
-        const query =
-          globalSearch.value
-            .trim()
-            .toLowerCase();
+        return;
+      }
 
-        if (!query) {
+      const matches =
+        searchablePages.filter(
+          item =>
+            item[0]
+              .toLowerCase()
+              .includes(query)
+        );
 
-          searchResults.classList.add(
-            "hidden"
-          );
+      const records = [
+        ...cases.map(
+          item => ({
+            label:
+              item.name ||
+              "Unbenannter Fall",
+            page:
+              "cases",
+            icon:
+              "📁"
+          })
+        ),
 
-          searchResults.innerHTML =
-            "";
+        ...evidence.map(
+          item => ({
+            label:
+              item.name ||
+              "Beweis",
+            page:
+              "evidence",
+            icon:
+              "🔎"
+          })
+        ),
 
-          return;
-        }
-
-        const matches =
-          searchablePages.filter(
-            item =>
-              item[0]
-                .toLowerCase()
-                .includes(query)
-          );
-
-        const searchableRecords = [
-
-          ...cases.map(
-            item => ({
-              label:
-                item.name ||
-                "Unbenannter Fall",
-
-              page:
-                "cases",
-
-              icon:
-                "📁"
-            })
-          ),
-
-          ...evidence.map(
-            item => ({
-              label:
-                item.name ||
-                "Beweis",
-
-              page:
-                "evidence",
-
-              icon:
-                "🔎"
-            })
-          ),
-
-          ...suspects.map(
-            item => ({
-              label:
-                item.name ||
-                "Verdächtige Person",
-
-              page:
-                "suspects",
-
-              icon:
-                "👤"
-            })
-          )
-
-        ].filter(
+        ...suspects.map(
+          item => ({
+            label:
+              item.name ||
+              "Verdächtige Person",
+            page:
+              "suspects",
+            icon:
+              "👤"
+          })
+        )
+      ]
+        .filter(
           item =>
             item.label
               .toLowerCase()
               .includes(query)
-        ).slice(0, 6);
+        )
+        .slice(0, 6);
 
+      const webSearchAction = `
+        <button
+          type="button"
+          class="web-search-result"
+          data-open-research="${escapeHTML(
+            globalSearch.value.trim()
+          )}"
+        >
+          🧭 In der App recherchieren
 
-        const webSearchAction = `
-          <button
-            type="button"
-            class="web-search-result"
-            data-open-research="${escapeHTML(
-              globalSearch.value.trim()
-            )}"
+          <small>
+            Lokale Recherche öffnen
+          </small>
+        </button>
+
+        <button
+          type="button"
+          class="web-search-result"
+          data-web-search="${escapeHTML(
+            globalSearch.value.trim()
+          )}"
+        >
+          🌐 Websuche
+
+          <small>
+            Polizei und lokale Nachrichten öffnen
+          </small>
+        </button>
+      `;
+
+      const resultHTML = [
+        ...matches.map(
+          item => `
+            <button
+              type="button"
+              data-search-page="${item[1]}"
+            >
+              🔎
+              ${escapeHTML(item[0])}
+            </button>
+          `
+        ),
+
+        ...records.map(
+          item => `
+            <button
+              type="button"
+              data-search-page="${item.page}"
+            >
+              ${item.icon}
+              ${escapeHTML(item.label)}
+            </button>
+          `
+        )
+      ].join("");
+
+      searchResults.innerHTML =
+        resultHTML ||
+        `
+          <div
+            style="
+              padding:12px;
+              color:#8e9aaa;
+            "
           >
-            🧭 In der App recherchieren
-
-            <small>
-              Lokale Recherche öffnen
-            </small>
-          </button>
-
-          <button
-            type="button"
-            class="web-search-result"
-            data-web-search="${escapeHTML(
-              globalSearch.value.trim()
-            )}"
-          >
-            🌐 Websuche
-
-            <small>
-              Polizei und lokale Nachrichten öffnen
-            </small>
-          </button>
+            Keine Ergebnisse gefunden.
+          </div>
         `;
 
+      searchResults.insertAdjacentHTML(
+        "beforeend",
+        webSearchAction
+      );
 
-        searchResults.innerHTML =
-          matches.length ||
-          searchableRecords.length ||
-          localCrimeTerms.some(
-            term =>
-              query.includes(term)
-          )
-
-            ? matches
-                .map(
-                  item => `
-                    <button
-                      type="button"
-                      data-search-page="${item[1]}"
-                    >
-                      🔎
-                      ${escapeHTML(item[0])}
-                    </button>
-                  `
-                )
-                .join("")
-
-              +
-
-              searchableRecords
-                .map(
-                  item => `
-                    <button
-                      type="button"
-                      data-search-page="${item.page}"
-                    >
-                      ${item.icon}
-                      ${escapeHTML(
-                        item.label
-                      )}
-                    </button>
-                  `
-                )
-                .join("")
-
-              +
-
-              webSearchAction
-
-            :
-
-            `
-              <div
-                style="
-                  padding:12px;
-                  color:#8e9aaa;
-                "
-              >
-                Keine Ergebnisse gefunden.
-              </div>
-            ` +
-
-            webSearchAction;
-
-
-        searchResults.classList.remove(
-          "hidden"
-        );
-      }
-    );
-  }
-
+      searchResults.classList.remove(
+        "hidden"
+      );
+    }
+  );
 
   searchResults?.addEventListener(
     "click",
     event => {
-
       const webButton =
         event.target.closest(
           "[data-web-search]"
         );
 
       if (webButton) {
-
         openLocalWebSearch(
           webButton.dataset.webSearch ||
           ""
         );
-
         return;
       }
-
 
       const researchButton =
         event.target.closest(
@@ -5787,10 +5441,8 @@ document.addEventListener("DOMContentLoaded", () => {
         );
 
       if (researchButton) {
-
         runResearch(
-          researchButton.dataset
-            .openResearch ||
+          researchButton.dataset.openResearch ||
           ""
         );
 
@@ -5801,13 +5453,14 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-
       const button =
         event.target.closest(
           "[data-search-page]"
         );
 
-      if (!button) return;
+      if (!button) {
+        return;
+      }
 
       showPage(
         button.dataset.searchPage
@@ -5824,16 +5477,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   );
 
-
   globalSearch?.addEventListener(
     "keydown",
     event => {
-
-      if (
-        event.key ===
-        "Escape"
-      ) {
-
+      if (event.key === "Escape") {
         globalSearch.value =
           "";
 
@@ -5844,10 +5491,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
 
-      if (
-        event.key !==
-        "Enter"
-      ) {
+      if (event.key !== "Enter") {
         return;
       }
 
@@ -5863,10 +5507,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   );
 
-
   // ========================================
   // BENACHRICHTIGUNGEN
   // ========================================
+
+  function updateNotificationBadge() {
+    const badge =
+      document.getElementById(
+        "notificationBadge"
+      );
+
+    if (!badge) return;
+
+    badge.textContent =
+      String(
+        Math.min(
+          cloudMessages.length,
+          99
+        )
+      );
+  }
 
   document
     .getElementById(
@@ -5875,86 +5535,28 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener(
       "click",
       () => {
-
-        const existing =
-          document.getElementById(
-            "notificationToast"
-          );
-
-        existing?.remove();
-
-        const toast =
-          document.createElement(
-            "div"
-          );
-
-        toast.id =
-          "notificationToast";
-
-        toast.className =
-          "notification-toast";
-
-        toast.innerHTML = `
-          <strong>
-            Benachrichtigungen
-          </strong>
-
-          <span>
-            ${
-              cloudMessages.length
-                ? `${cloudMessages.length} Nachricht(en) im Cloud-Chat.`
-                : "Keine neuen Meldungen."
-            }
-          </span>
-        `;
-
-        document.body.appendChild(
-          toast
-        );
-
-        requestAnimationFrame(
-          () =>
-            toast.classList.add(
-              "visible"
-            )
-        );
-
-        setTimeout(
-          () => {
-
-            toast.classList.remove(
-              "visible"
-            );
-
-            setTimeout(
-              () =>
-                toast.remove(),
-              220
-            );
-
-          },
-          3200
+        showTemporaryMessage(
+          "Benachrichtigungen",
+          cloudMessages.length
+            ? `${cloudMessages.length} Nachricht(en) im Cloud-Chat.`
+            : "Keine neuen Meldungen."
         );
       }
     );
-
 
   // ========================================
   // EINSTELLUNGEN
   // ========================================
 
   function applySettings() {
-
     const getSetting =
       key =>
         document.querySelector(
           `[data-setting="${key}"]`
         );
 
-
     const valueOf =
       key => {
-
         const control =
           getSetting(key);
 
@@ -5962,51 +5564,82 @@ document.addEventListener("DOMContentLoaded", () => {
           return undefined;
         }
 
-        return control.type ===
-          "checkbox"
-            ? control.checked
-            : control.value;
+        return control.type === "checkbox"
+          ? control.checked
+          : control.value;
       };
-
 
     document.body.classList.toggle(
       "light-mode",
-      valueOf("darkMode") ===
-      false
+      valueOf("darkMode") === false
     );
-
 
     document.body.classList.toggle(
       "compact-mode",
-      valueOf("compactMode") ===
-      true
+      valueOf("compactMode") === true
     );
-
 
     document.body.classList.toggle(
       "high-contrast",
-      valueOf("highContrast") ===
-      true
+      valueOf("highContrast") === true
     );
-
 
     document.body.classList.toggle(
       "reduced-motion",
-      valueOf("motion") ===
-      false
+      valueOf("motion") === false
     );
-
 
     document.body.dataset.accent =
       valueOf("accentColor") ||
       "chili";
-
 
     document.body.dataset.density =
       valueOf("uiDensity") ||
       "comfortable";
   }
 
+  document
+    .querySelectorAll(
+      "[data-setting]"
+    )
+    .forEach(setting => {
+      const key =
+        setting.dataset.setting;
+
+      const saved =
+        localStorage.getItem(
+          `setting_${key}`
+        );
+
+      const isCheckbox =
+        setting.type === "checkbox";
+
+      if (saved !== null) {
+        if (isCheckbox) {
+          setting.checked =
+            saved === "true";
+        } else {
+          setting.value =
+            saved;
+        }
+      }
+
+      setting.addEventListener(
+        "change",
+        () => {
+          localStorage.setItem(
+            `setting_${key}`,
+            String(
+              isCheckbox
+                ? setting.checked
+                : setting.value
+            )
+          );
+
+          applySettings();
+        }
+      );
+    });
 
   document
     .getElementById(
@@ -6015,14 +5648,12 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener(
       "click",
       () => {
-
-        if (
-          !window.confirm(
+        const confirmed =
+          window.confirm(
             "Alle lokalen App-Daten wirklich löschen?"
-          )
-        ) {
-          return;
-        }
+          );
+
+        if (!confirmed) return;
 
         [
           STORAGE.cases,
@@ -6030,7 +5661,8 @@ document.addEventListener("DOMContentLoaded", () => {
           STORAGE.suspects,
           STORAGE.messages,
           "schilischoten_phantom_profile",
-          "schilischoten_research_history"
+          "schilischoten_research_history",
+          "schilischoten_active_account"
         ].forEach(
           key =>
             localStorage.removeItem(
@@ -6038,9 +5670,7 @@ document.addEventListener("DOMContentLoaded", () => {
             )
         );
 
-        Object.keys(
-          localStorage
-        )
+        Object.keys(localStorage)
           .filter(
             key =>
               key.startsWith(
@@ -6058,7 +5688,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     );
 
-
   document
     .getElementById(
       "tinyResetButton"
@@ -6066,81 +5695,23 @@ document.addEventListener("DOMContentLoaded", () => {
     ?.addEventListener(
       "click",
       () => {
-
-        if (
-          !window.confirm(
+        const confirmed =
+          window.confirm(
             "Alle gespeicherten Daten wirklich löschen?"
-          )
-        ) {
-          return;
-        }
+          );
+
+        if (!confirmed) return;
 
         localStorage.clear();
         window.location.reload();
       }
     );
 
-
-  document
-    .querySelectorAll(
-      "[data-setting]"
-    )
-    .forEach(
-      setting => {
-
-        const key =
-          setting.dataset.setting;
-
-        const saved =
-          localStorage.getItem(
-            `setting_${key}`
-          );
-
-        const isCheckbox =
-          setting.type ===
-          "checkbox";
-
-
-        if (
-          saved !== null
-        ) {
-
-          if (isCheckbox) {
-            setting.checked =
-              saved === "true";
-          } else {
-            setting.value =
-              saved;
-          }
-        }
-
-
-        setting.addEventListener(
-          "change",
-          () => {
-
-            localStorage.setItem(
-              `setting_${key}`,
-              String(
-                isCheckbox
-                  ? setting.checked
-                  : setting.value
-              )
-            );
-
-            applySettings();
-          }
-        );
-      }
-    );
-
-
   // ========================================
-  // RENDER
+  // TEAM
   // ========================================
 
   function renderTeam() {
-
     const grid =
       document.getElementById(
         "teamGrid"
@@ -6178,9 +5749,11 @@ document.addEventListener("DOMContentLoaded", () => {
         .join("");
   }
 
+  // ========================================
+  // BEWEISE
+  // ========================================
 
   function renderEvidence() {
-
     const grid =
       document.getElementById(
         "evidenceGrid"
@@ -6189,13 +5762,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!grid) return;
 
     if (!evidence.length) {
-
       grid.innerHTML = `
         <div class="empty-state">
           Noch keine Beweise gespeichert.
         </div>
       `;
-
       return;
     }
 
@@ -6225,9 +5796,11 @@ document.addEventListener("DOMContentLoaded", () => {
         .join("");
   }
 
+  // ========================================
+  // VERDÄCHTIGE
+  // ========================================
 
   function renderSuspects() {
-
     const grid =
       document.getElementById(
         "suspectGrid"
@@ -6236,54 +5809,56 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!grid) return;
 
     if (!suspects.length) {
-
       grid.innerHTML = `
         <div class="empty-state">
           Noch keine Verdächtigen erfasst.
         </div>
       `;
-
       return;
     }
 
     grid.innerHTML =
       suspects
         .map(
-          item => `
-            <div class="person-card">
+          item => {
+            const name =
+              item.name ||
+              "Unbekannt";
 
-              <div class="avatar big">
-                ${escapeHTML(
-                  (
-                    item.name ||
-                    "?"
-                  ).charAt(0)
-                )}
+            return `
+              <div class="person-card">
+
+                <div class="avatar big">
+                  ${escapeHTML(
+                    name.charAt(0)
+                  )}
+                </div>
+
+                <h3>
+                  ${escapeHTML(
+                    name
+                  )}
+                </h3>
+
+                <p>
+                  ${escapeHTML(
+                    item.description ||
+                    "Keine Beschreibung"
+                  )}
+                </p>
+
               </div>
-
-              <h3>
-                ${escapeHTML(
-                  item.name ||
-                  "Unbekannt"
-                )}
-              </h3>
-
-              <p>
-                ${escapeHTML(
-                  item.description ||
-                  "Keine Beschreibung"
-                )}
-              </p>
-
-            </div>
-          `
+            `;
+          }
         )
         .join("");
   }
 
+  // ========================================
+  // STATISTIKEN
+  // ========================================
 
   function renderStats() {
-
     const solved =
       cases.filter(
         item =>
@@ -6291,11 +5866,23 @@ document.addEventListener("DOMContentLoaded", () => {
           "done"
       ).length;
 
+    const totalCases =
+      cases.length;
 
-    const elements = {
+    const rate =
+      totalCases
+        ? Math.round(
+            (
+              solved /
+              totalCases
+            ) *
+            100
+          )
+        : 0;
 
+    const values = {
       statsTotalCases:
-        cases.length,
+        totalCases,
 
       statsSolvedCases:
         solved,
@@ -6304,132 +5891,34 @@ document.addEventListener("DOMContentLoaded", () => {
         evidence.length,
 
       statsMessageCount:
-        cloudMessages.length
-    };
+        cloudMessages.length,
 
+      statsActivityEvidence:
+        evidence.length,
 
-    Object.entries(elements)
-      .forEach(
-        ([id, value]) => {
+      statsActivitySuspects:
+        suspects.length,
 
-          const element =
-            document.getElementById(
-              id
-            );
-
-          if (element) {
-            element.textContent =
-              String(value);
-          }
-        }
-      );
-
-
-    const rate =
-      cases.length
-        ? Math.round(
-            (
-              solved /
-              cases.length
-            ) *
-            100
-          )
-        : 0;
-
-
-    const success =
-      document.getElementById(
-        "statsSuccessRate"
-      );
-
-    if (success) {
-      success.textContent =
-        `${rate}%`;
-    }
-
-
-    const statusCounts = {
-
-      open:
+      statsOpenCases:
         cases.filter(
           item =>
             item.status ===
             "open"
         ).length,
 
-      progress:
+      statsProgressCases:
         cases.filter(
           item =>
             item.status ===
             "progress"
         ).length,
 
-      done:
+      statsDoneCases:
         solved
     };
 
-
-    const total =
-      cases.length ||
-      1;
-
-
-    Object.entries(
-      statusCounts
-    ).forEach(
-      ([status, count]) => {
-
-        const suffix =
-          status === "open"
-            ? "Open"
-            : status === "progress"
-              ? "Progress"
-              : "Done";
-
-        const countElement =
-          document.getElementById(
-            `stats${suffix}Cases`
-          );
-
-        const bar =
-          document.getElementById(
-            `stats${suffix}Bar`
-          );
-
-        if (countElement) {
-          countElement.textContent =
-            String(count);
-        }
-
-        if (bar) {
-          bar.style.width =
-            `${Math.round(
-              (
-                count /
-                total
-              ) *
-              100
-            )}%`;
-        }
-      }
-    );
-
-
-    const activity = {
-
-      statsActivityEvidence:
-        evidence.length,
-
-      statsActivitySuspects:
-        suspects.length
-    };
-
-
-    Object.entries(
-      activity
-    ).forEach(
+    Object.entries(values).forEach(
       ([id, value]) => {
-
         const element =
           document.getElementById(
             id
@@ -6441,11 +5930,65 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     );
+
+    const successRate =
+      document.getElementById(
+        "statsSuccessRate"
+      );
+
+    if (successRate) {
+      successRate.textContent =
+        `${rate}%`;
+    }
+
+    const statuses = {
+      Open: cases.filter(
+        item =>
+          item.status ===
+          "open"
+      ).length,
+
+      Progress: cases.filter(
+        item =>
+          item.status ===
+          "progress"
+      ).length,
+
+      Done: solved
+    };
+
+    const denominator =
+      Math.max(
+        totalCases,
+        1
+      );
+
+    Object.entries(statuses).forEach(
+      ([key, count]) => {
+        const bar =
+          document.getElementById(
+            `stats${key}Bar`
+          );
+
+        if (bar) {
+          bar.style.width =
+            `${Math.round(
+              (
+                count /
+                denominator
+              ) *
+              100
+            )}%`;
+        }
+      }
+    );
   }
 
+  // ========================================
+  // ALLES RENDERN
+  // ========================================
 
   function renderAll() {
-
     renderDashboard();
     renderCases();
     renderEvidence();
@@ -6455,9 +5998,9 @@ document.addEventListener("DOMContentLoaded", () => {
     updateAccountUI();
     renderPhantom();
     renderCloudChat();
+    updateNotificationBadge();
     applySettings();
   }
-
 
   // ========================================
   // START
@@ -6475,12 +6018,4 @@ document.addEventListener("DOMContentLoaded", () => {
     "🌶️ script_fixed.js erfolgreich geladen."
   );
 
-});console.log("CHAT TEST GELADEN");
-
-const testButton = document.getElementById("sendMessage");
-
-if (testButton) {
-  testButton.addEventListener("click", () => {
-    alert("Der Senden-Knopf funktioniert!");
-  });
-}
+});
